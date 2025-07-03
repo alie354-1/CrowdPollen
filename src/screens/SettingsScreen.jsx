@@ -20,6 +20,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useNotification } from '../contexts/NotificationContext'
 import ApiTestPanel from '../components/ApiTestPanel'
+import LocationInput from '../components/LocationInput'
 
 export default function SettingsScreen() {
   const navigate = useNavigate()
@@ -28,6 +29,7 @@ export default function SettingsScreen() {
   const { preferences, updatePreferences } = useNotification()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [showApiTest, setShowApiTest] = useState(false)
+  const [showLocationInput, setShowLocationInput] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
 
   useEffect(() => {
@@ -264,7 +266,7 @@ export default function SettingsScreen() {
                 </div>
               </div>
               <button
-                onClick={() => navigate('/location')}
+                onClick={() => setShowLocationInput(true)}
                 className="text-blue-500 text-sm font-medium hover:text-blue-600 transition-colors"
               >
                 {location ? 'Change' : 'Set'}
@@ -387,6 +389,27 @@ export default function SettingsScreen() {
           <p className="text-sm text-gray-400">Built with ❤️ for citizen science</p>
         </div>
       </div>
+
+      {/* Location Input Modal */}
+      {showLocationInput && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
+          <div className="bg-white rounded-2xl p-6 max-w-md w-full max-h-[80vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Set Location</h3>
+              <button
+                onClick={() => setShowLocationInput(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <ArrowLeft className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+            <LocationInput 
+              onLocationSet={() => setShowLocationInput(false)}
+              showTitle={false}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
       {showDeleteConfirm && (

@@ -177,15 +177,18 @@ export default function HomeScreen() {
         </div>
 
         {!location && (
-          <div className="bg-blue-50 rounded-xl p-4 mb-6">
+          <button
+            onClick={() => navigate('/settings')}
+            className="w-full bg-blue-50 rounded-xl p-4 mb-6 hover:bg-blue-100 transition-colors"
+          >
             <div className="flex items-center">
               <Info className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
-              <div>
+              <div className="text-left">
                 <p className="text-blue-900 font-medium">Location Required</p>
-                <p className="text-blue-700 text-sm">Set your location for personalized pollen data</p>
+                <p className="text-blue-700 text-sm">Tap to set your location for personalized pollen data</p>
               </div>
             </div>
-          </div>
+          </button>
         )}
       </div>
 
