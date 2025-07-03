@@ -1,0 +1,24 @@
+{
+  "name": "CrowdPollen",
+  "short_name": "CrowdPollen",
+  "description": "Community pollen tracking app",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [],
+  "categories": ["health", "science", "weather"],
+  "shortcuts": [
+    {
+      "name": "Submit Reading",
+      "short_name": "Submit",
+      "url": "/camera"
+    },
+    {
+      "name": "View Map",
+      "short_name": "Map", 
+      "url": "/map"
+    }
+  ]
+}

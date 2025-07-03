@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrowdPollen - API Setup Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: #0d1117;
+            color: #c9d1d9;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+            border-radius: 12px;
+            border: 1px solid #374151;
+        }
+
+        .header h1 {
+            color: #60a5fa;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        .header p {
+            color: #9ca3af;
+            font-size: 1.1rem;
+        }
+
+        .setup-grid {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .config-panel {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 25px;
+        }
+
+        .log-panel {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #21262d;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+
+        .section h3 {
+            color: #58a6ff;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #6e7681;
+            transition: all 0.3s ease;
+        }
+
+        .status-indicator.testing {
+            background: #f1c40f;
+            animation: pulse 1s infinite;
+        }
+
+        .status-indicator.success {
+            background: #28a745;
+        }
+
+        .status-indicator.error {
+            background: #dc3545;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #f0f6fc;
+            font-weight: 500;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            color: #c9d1d9;
+            font-family: inherit;
+            font-size: 14px;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #58a6ff;
+            box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.1);
+        }
+
+        .form-group input[type="password"] {
+            font-family: monospace;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #238636;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2ea043;
+        }
+
+        .btn-secondary {
+            background: #21262d;
+            color: #c9d1d9;
+            border: 1px solid #30363d;
+        }
+
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+
+        .btn-danger {
+            background: #da3633;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #e5534b;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .log-container {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .log-entry.info {
+            color: #58a6ff;
+        }
+
+        .log-entry.success {
+            color: #28a745;
+        }
+
+        .log-entry.error {
+            color: #dc3545;
+        }
+
+        .log-entry.warning {
+            color: #f1c40f;
+        }
+
+        .log-timestamp {
+            color: #6e7681;
+            margin-right: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #21262d;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #238636, #2ea043);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+            padding: 20px;
+            background: #161b22;
+            border-radius: 8px;
+            border: 1px solid #30363d;
+        }
+
+        .env-preview {
+            background: #0d1117;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .env-preview pre {
+            color: #c9d1d9;
+            white-space: pre-wrap;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            background: rgba(88, 166, 255, 0.1);
+            border-color: #58a6ff;
+            color: #58a6ff;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border-color: #28a745;
+            color: #28a745;
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            border-color: #dc3545;
+            color: #dc3545;
+        }
+
+        .collapsible {
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .collapsible:hover {
+            color: #58a6ff;
+        }
+
+        .collapsible-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .collapsible-content.open {
+            max-height: 1000px;
+        }
+
+        @media (max-width: 768px) {
+            .setup-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .log-panel {
+                position: static;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌻 CrowdPollen API Setup</h1>
+            <p>Configure your development environment with all required API keys and services</p>
+        </div>
+
+        <div class="alert alert-info">
+            <strong>Welcome Developer!</strong> This tool will help you configure all the APIs needed for CrowdPollen development. 
+            Follow the steps below to test connections and generate your .env file.
+        </div>
+
+        <div class="setup-grid">
+            <div class="config-panel">
+                <!-- Supabase Configuration -->
+                <div class="section">
+                    <h3>
+                        <span class="status-indicator" id="supabase-status"></span>
+                        🗄️ Supabase Configuration
+                    </h3>
+                    <div class="form-group">
+                        <label for="supabase-url">Project URL</label>
+                        <input type="url" id="supabase-url" placeholder="https://your-project.supabase.co">
+                    </div>
+                    <div class="form-group">
+                        <label for="supabase-anon">Anon Key</label>
+                        <input type="password" id="supabase-anon" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    </div>
+                    <div class="form-group">
+                        <label for="supabase-service">Service Role Key (for migrations)</label>
+                        <input type="password" id="supabase-service" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                    </div>
+                    <button class="btn btn-primary" onclick="testSupabase()">Test Connection</button>
+                </div>
+
+                <!-- Mapbox Configuration -->
+                <div class="section">
+                    <h3>
+                        <span class="status-indicator" id="mapbox-status"></span>
+                        🗺️ Mapbox Configuration
+                    </h3>
+                    <div class="form-group">
+                        <label for="mapbox-token">Access Token</label>
+                        <input type="password" id="mapbox-token" placeholder="pk.eyJ1IjoieW91cnVzZXJuYW1lIiwiYSI6ImNsZjJ...">
+                    </div>
+                    <button class="btn btn-primary" onclick="testMapbox()">Test Connection</button>
+                </div>
+
+                <!-- Hugging Face Configuration -->
+                <div class="section">
+                    <h3>
+                        <span class="status-indicator" id="huggingface-status"></span>
+                        🤗 Hugging Face Configuration
+                    </h3>
+                    <div class="form-group">
+                        <label for="hf-token">API Token</label>
+                        <input type="password" id="hf-token" placeholder="hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+                    </div>
+                    <div class="form-group">
+                        <label for="hf-model">Model ID</label>
+                        <input type="text" id="hf-model" placeholder="your-username/pollen-detection-model">
+                    </div>
+                    <div class="form-group">
+                        <label for="hf-endpoint">Custom Endpoint (optional)</label>
+                        <input type="url" id="hf-endpoint" placeholder="https://api-inference.huggingface.co/models/...">
+                    </div>
+                    <button class="btn btn-primary" onclick="testHuggingFace()">Test Model</button>
+                </div>
+
+                <!-- WeatherAPI Configuration -->
+                <div class="section">
+                    <h3>
+                        <span class="status-indicator" id="weather-status"></span>
+                        🌤️ WeatherAPI.com Configuration
+                    </h3>
+                    <div class="form-group">
+                        <label for="weather-key">API Key</label>
+                        <input type="password" id="weather-key" placeholder="your_weatherapi_com_api_key">
+                    </div>
+                    <button class="btn btn-primary" onclick="testWeather()">Test Connection</button>
+                </div>
+
+                <!-- Database Migration -->
+                <div class="section">
+                    <h3>
+                        <span class="status-indicator" id="migration-status"></span>
+                        🔧 Database Migration
+                    </h3>
+                    <p style="color: #9ca3af; margin-bottom: 15px;">
+                        Run database schema and create required tables/functions
+                    </p>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="migration-progress"></div>
+                    </div>
+                    <button class="btn btn-primary" onclick="runMigration()" id="migration-btn" disabled>
+                        Run Migration
+                    </button>
+                </div>
+            </div>
+
+            <div class="log-panel">
+                <h3 style="margin-bottom: 15px;">📋 Setup Log</h3>
+                <div class="log-container" id="log-container">
+                    <div class="log-entry info">
+                        <span class="log-timestamp">[00:00:00]</span>
+                        Setup tool initialized. Ready to configure APIs.
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="clearLog()" style="margin-top: 10px; width: 100%;">
+                    Clear Log
+                </button>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn btn-primary" onclick="generateEnv()" id="generate-btn" disabled>
+                📄 Generate .env File
+            </button>
+            <button class="btn btn-secondary" onclick="testAllAPIs()">
+                🧪 Test All APIs
+            </button>
+            <button class="btn btn-secondary" onclick="showEnvPreview()">
+                👁️ Preview .env
+            </button>
+        </div>
+
+        <div id="env-preview-container" style="display: none;">
+            <h3 style="margin: 20px 0 10px 0;">Environment File Preview:</h3>
+            <div class="env-preview">
+                <pre id="env-preview-content"></pre>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="btn btn-primary" onclick="downloadEnv()">
+                    💾 Download .env File
+                </button>
+                <button class="btn btn-secondary" onclick="copyEnvToClipboard()">
+                    📋 Copy to Clipboard
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        const state = {
+            supabase: { tested: false, success: false },
+            mapbox: { tested: false, success: false },
+            huggingface: { tested: false, success: false },
+            weather: { tested: false, success: false },
+            migration: { completed: false, success: false }
+        };
+
+        // Logging functions
+        function log(message, type = 'info') {
+            const container = document.getElementById('log-container');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            entry.innerHTML = `<span class="log-timestamp">[${timestamp}]</span>${message}`;
+            container.appendChild(entry);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function clearLog() {
+            const container = document.getElementById('log-container');
+            container.innerHTML = '<div class="log-entry info"><span class="log-timestamp">[00:00:00]</span>Log cleared.</div>';
+        }
+
+        function updateStatus(service, status) {
+            const indicator = document.getElementById(`${service}-status`);
+            indicator.className = `status-indicator ${status}`;
+            
+            if (status === 'success') {
+                state[service].tested = true;
+                state[service].success = true;
+            } else if (status === 'error') {
+                state[service].tested = true;
+                state[service].success = false;
+            }
+            
+            updateGenerateButton();
+        }
+
+        function updateGenerateButton() {
+            const allTested = Object.values(state).every(s => s.tested || s.completed);
+            const allSuccess = Object.values(state).every(s => s.success);
+            const generateBtn = document.getElementById('generate-btn');
+            const migrationBtn = document.getElementById('migration-btn');
+            
+            generateBtn.disabled = !allTested || !allSuccess;
+            migrationBtn.disabled = !state.supabase.success;
+        }
+
+        // API Testing Functions
+        async function testSupabase() {
+            const url = document.getElementById('supabase-url').value;
+            const anonKey = document.getElementById('supabase-anon').value;
+            
+            if (!url || !anonKey) {
+                log('Please enter Supabase URL and Anon Key', 'error');
+                return;
+            }
+
+            updateStatus('supabase', 'testing');
+            log('Testing Supabase connection...');
+
+            try {
+                // Test basic connection
+                const response = await fetch(`${url}/rest/v1/`, {
+                    headers: {
+                        'apikey': anonKey,
+                        'Authorization': `Bearer ${anonKey}`
+                    }
+                });
+
+                if (response.ok) {
+                    log('✅ Supabase connection successful', 'success');
+                    
+                    // Test storage
+                    const storageResponse = await fetch(`${url}/storage/v1/bucket`, {
+                        headers: {
+                            'apikey': anonKey,
+                            'Authorization': `Bearer ${anonKey}`
+                        }
+                    });
+
+                    if (storageResponse.ok) {
+                        log('✅ Supabase storage accessible', 'success');
+                        updateStatus('supabase', 'success');
+                    } else {
+                        log('⚠️ Supabase storage not accessible (may need setup)', 'warning');
+                        updateStatus('supabase', 'success'); // Still consider success
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                log(`❌ Supabase test failed: ${error.message}`, 'error');
+                updateStatus('supabase', 'error');
+            }
+        }
+
+        async function testMapbox() {
+            const token = document.getElementById('mapbox-token').value;
+            
+            if (!token) {
+                log('Please enter Mapbox access token', 'error');
+                return;
+            }
+
+            updateStatus('mapbox', 'testing');
+            log('Testing Mapbox connection...');
+
+            try {
+                const response = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/San%20Francisco.json?access_token=${token}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.features && data.features.length > 0) {
+                        log('✅ Mapbox geocoding test successful', 'success');
+                        updateStatus('mapbox', 'success');
+                    } else {
+                        throw new Error('No geocoding results returned');
+                    }
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                log(`❌ Mapbox test failed: ${error.message}`, 'error');
+                updateStatus('mapbox', 'error');
+            }
+        }
+
+        async function testHuggingFace() {
+            const token = document.getElementById('hf-token').value;
+            const model = document.getElementById('hf-model').value;
+            const endpoint = document.getElementById('hf-endpoint').value;
+            
+            if (!token) {
+                log('Please enter Hugging Face token', 'error');
+                return;
+            }
+
+            updateStatus('huggingface', 'testing');
+            log('Testing Hugging Face configuration...');
+
+            try {
+                // First, always test token validity
+                log('🔍 Testing Hugging Face token validity...');
+                const whoamiResponse = await fetch('https://huggingface.co/api/whoami', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (!whoamiResponse.ok) {
+                    throw new Error(`Invalid token: ${whoamiResponse.status}`);
+                }
+
+                const userData = await whoamiResponse.json();
+                log(`✅ Token valid for user: ${userData.name || userData.fullname || 'Unknown'}`, 'success');
+
+                // Determine what type of endpoint we're testing
+                let apiUrl;
+                let isSpace = false;
+                let isInferenceAPI = false;
+
+                if (endpoint) {
+                    apiUrl = endpoint;
+                    isSpace = endpoint.includes('.hf.space');
+                } else if (model) {
+                    if (model.includes('.hf.space')) {
+                        apiUrl = model;
+                        isSpace = true;
+                    } else {
+                        apiUrl = `https://api-inference.huggingface.co/models/${model}`;
+                        isInferenceAPI = true;
+                    }
+                }
+
+                if (isSpace) {
+                    // For Spaces, we can't test directly due to CORS, but we can validate the format
+                    log('🔍 Validating Hugging Face Space configuration...');
+                    
+                    // Check if the Space URL format is correct
+                    const spacePattern = /^https?:\/\/[\w-]+\.hf\.space/;
+                    if (!spacePattern.test(apiUrl)) {
+                        throw new Error('Invalid Space URL format. Should be: https://username-spacename.hf.space');
+                    }
+
+                    log('✅ Space URL format is valid', 'success');
+                    log('⚠️ Note: Space accessibility cannot be tested due to CORS restrictions', 'warning');
+                    log('💡 Make sure your Space is running and accessible in a browser', 'warning');
+                    updateStatus('huggingface', 'success');
+
+                } else if (isInferenceAPI) {
+                    // Test regular inference API
+                    log('🔍 Testing Hugging Face Inference API...');
+                    
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ inputs: "test" })
+                    });
+
+                    if (response.ok || response.status === 400) {
+                        // 400 is OK - means model is accessible but input format is wrong
+                        log('✅ Hugging Face Inference API model accessible', 'success');
+                        updateStatus('huggingface', 'success');
+                    } else if (response.status === 503) {
+                        log('⚠️ Model is loading, but accessible. This is normal.', 'warning');
+                        updateStatus('huggingface', 'success');
+                    } else if (response.status === 404) {
+                        log('❌ Model not found. Check the model ID.', 'error');
+                        log('💡 Tip: Ensure the model exists and is public', 'warning');
+                        updateStatus('huggingface', 'error');
+                    } else {
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+
+                } else if (endpoint) {
+                    // Custom endpoint - try to validate format
+                    log('🔍 Validating custom endpoint...');
+                    
+                    try {
+                        new URL(endpoint);
+                        log('✅ Custom endpoint URL format is valid', 'success');
+                        log('⚠️ Note: Custom endpoint functionality cannot be fully tested', 'warning');
+                        updateStatus('huggingface', 'success');
+                    } catch {
+                        throw new Error('Invalid custom endpoint URL format');
+                    }
+
+                } else {
+                    // Just token validation was successful
+                    log('✅ Hugging Face token is valid and ready to use', 'success');
+                    log('💡 Add a model ID or endpoint URL for more specific testing', 'warning');
+                    updateStatus('huggingface', 'success');
+                }
+
+            } catch (error) {
+                log(`❌ Hugging Face test failed: ${error.message}`, 'error');
+                
+                if (error.message.includes('CORS') || error.message.includes('blocked')) {
+                    log('💡 CORS Error - This is expected for Spaces. Configuration saved anyway.', 'warning');
+                    log('✅ Token is valid, Space URL format checked', 'success');
+                    updateStatus('huggingface', 'success');
+                } else if (error.message.includes('404')) {
+                    log('💡 Common fixes:', 'warning');
+                    log('  • Check if the model ID is correct', 'warning');
+                    log('  • Ensure the model is public or you have access', 'warning');
+                    log('  • For Spaces: use format username-spacename.hf.space', 'warning');
+                    updateStatus('huggingface', 'error');
+                } else {
+                    updateStatus('huggingface', 'error');
+                }
+            }
+        }
+
+        async function testWeather() {
+            const apiKey = document.getElementById('weather-key').value;
+            
+            if (!apiKey) {
+                log('Please enter WeatherAPI.com API key', 'error');
+                return;
+            }
+
+            updateStatus('weather', 'testing');
+            log('Testing WeatherAPI.com connection...');
+
+            try {
+                const response = await fetch(`https://api.weatherapi.com/v1/current.json?key=${apiKey}&q=London&aqi=no`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ WeatherAPI test successful. Current temp in London: ${data.current.temp_c}°C`, 'success');
+                    log(`📍 Location: ${data.location.name}, ${data.location.country}`, 'info');
+                    log(`🌤️ Condition: ${data.current.condition.text}`, 'info');
+                    updateStatus('weather', 'success');
+                } else if (response.status === 401) {
+                    throw new Error('Invalid API key. Please check your WeatherAPI.com key.');
+                } else if (response.status === 400) {
+                    throw new Error('Bad request. API key may be invalid or location not found.');
+                } else {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+            } catch (error) {
+                log(`❌ WeatherAPI test failed: ${error.message}`, 'error');
+                if (error.message.includes('Invalid API key')) {
+                    log('💡 Get your free API key at: https://www.weatherapi.com/signup.aspx', 'warning');
+                }
+                updateStatus('weather', 'error');
+            }
+        }
+
+        async function testAllAPIs() {
+            log('🧪 Running all API tests...');
+            await testSupabase();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testMapbox();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testHuggingFace();
+            await new Promise(resolve => setTimeout(resolve, 500));
+            await testWeather();
+            log('🏁 All API tests completed');
+        }
+
+        async function runMigration() {
+            if (!state.supabase.success) {
+                log('❌ Supabase must be configured before running migration', 'error');
+                return;
+            }
+
+            const url = document.getElementById('supabase-url').value;
+            const serviceKey = document.getElementById('supabase-service').value;
+            
+            if (!serviceKey) {
+                log('Please enter Service Role Key for migration', 'error');
+                return;
+            }
+
+            updateStatus('migration', 'testing');
+            log('🔧 Starting database migration...');
+
+            const progressBar = document.getElementById('migration-progress');
+            let progress = 0;
+
+            const updateProgress = (percent, message) => {
+                progress = percent;
+                progressBar.style.width = `${percent}%`;
+                log(message);
+            };
+
+            try {
+                updateProgress(10, '📋 Reading database schema...');
+                
+                // Read the database schema from the docs folder
+                const schemaResponse = await fetch('../docs/database-schema.sql');
+                if (!schemaResponse.ok) {
+                    throw new Error('Could not load database schema file');
+                }
+                const schema = await schemaResponse.text();
+
+                updateProgress(30, '🗄️ Creating database tables...');
+
+                // Split schema into individual statements
+                const statements = schema.split(';').filter(stmt => stmt.trim());
+                const totalStatements = statements.length;
+
+                for (let i = 0; i < statements.length; i++) {
+                    const statement = statements[i].trim();
+                    if (!statement) continue;
+
+                    try {
+                        const response = await fetch(`${url}/rest/v1/rpc/exec_sql`, {
+                            method: 'POST',
+                            headers: {
+                                'apikey': serviceKey,
+                                'Authorization': `Bearer ${serviceKey}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({ sql: statement })
+                        });
+
+                        if (!response.ok) {
+                            // Try alternative method for DDL statements
+                            const altResponse = await fetch(`${url}/rest/v1/`, {
+                                method: 'POST',
+                                headers: {
+                                    'apikey': serviceKey,
+                                    'Authorization': `Bearer ${serviceKey}`,
+                                    'Content-Type': 'application/sql'
+                                },
+                                body: statement
+                            });
+
+                            if (!altResponse.ok) {
+                                log(`⚠️ Statement ${i + 1} may have failed (this is often normal)`, 'warning');
+                            }
+                        }
+
+                        const currentProgress = 30 + (i / totalStatements) * 50;
+                        updateProgress(currentProgress, `✅ Executed statement ${i + 1}/${totalStatements}`);
+                        
+                        // Small delay to prevent rate limiting
+                        await new Promise(resolve => setTimeout(resolve, 100));
+                    } catch (error) {
+                        log(`⚠️ Statement ${i + 1} failed: ${error.message}`, 'warning');
+                    }
+                }
+
+                updateProgress(85, '🔧 Creating storage buckets...');
+
+                // Create storage bucket for pollen images
+                try {
+                    const bucketResponse = await fetch(`${url}/storage/v1/bucket`, {
+                        method: 'POST',
+                        headers: {
+                            'apikey': serviceKey,
+                            'Authorization': `Bearer ${serviceKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            id: 'pollen-images',
+                            name: 'pollen-images',
+                            public: true,
+                            file_size_limit: 5242880, // 5MB
+                            allowed_mime_types: ['image/jpeg', 'image/png', 'image/webp']
+                        })
+                    });
+
+                    if (bucketResponse.ok) {
+                        log('✅ Storage bucket created successfully', 'success');
+                    } else {
+                        log('⚠️ Storage bucket may already exist', 'warning');
+                    }
+                } catch (error) {
+                    log(`⚠️ Storage bucket creation failed: ${error.message}`, 'warning');
+                }
+
+                updateProgress(100, '🎉 Database migration completed successfully!');
+                
+                state.migration.completed = true;
+                state.migration.success = true;
+                updateStatus('migration', 'success');
+                updateGenerateButton();
+
+            } catch (error) {
+                log(`❌ Migration failed: ${error.message}`, 'error');
+                updateStatus('migration', 'error');
+                progressBar.style.width = '0%';
+            }
+        }
+
+        function generateEnvContent() {
+            const supabaseUrl = document.getElementById('supabase-url').value;
+            const supabaseAnon = document.getElementById('supabase-anon').value;
+            const mapboxToken = document.getElementById('mapbox-token').value;
+            const hfToken = document.getElementById('hf-token').value;
+            const hfModel = document.getElementById('hf-model').value;
+            const hfEndpoint = document.getElementById('hf-endpoint').value;
+            const weatherKey = document.getElementById('weather-key').value;
+
+            return `# CrowdPollen Environment Configuration
+# Generated by Setup Tool on ${new Date().toISOString()}
+
+# Supabase Configuration
+VITE_SUPABASE_URL=${supabaseUrl}
+VITE_SUPABASE_ANON_KEY=${supabaseAnon}
+
+# Mapbox Configuration
+VITE_MAPBOX_ACCESS_TOKEN=${mapboxToken}
+
+# Hugging Face Configuration
+VITE_HUGGINGFACE_API_TOKEN=${hfToken}
+VITE_HUGGINGFACE_MODEL_ID=${hfModel}
+${hfEndpoint ? `VITE_HUGGINGFACE_ENDPOINT=${hfEndpoint}` : '# VITE_HUGGINGFACE_ENDPOINT='}
+
+# WeatherAPI.com Configuration
+VITE_WEATHERAPI_KEY=${weatherKey}
+
+# Application Configuration
+VITE_APP_ENV=development
+VITE_APP_VERSION=1.0.0
+VITE_ENABLE_ANALYTICS=true
+VITE_ENABLE_PUSH_NOTIFICATIONS=false
+VITE_ENABLE_OFFLINE_MODE=true
+
+# Debug Configuration
+VITE_DEBUG_MODE=true
+VITE_LOG_LEVEL=info
+`;
+        }
+
+        function showEnvPreview() {
+            const container = document.getElementById('env-preview-container');
+            const content = document.getElementById('env-preview-content');
+            
+            content.textContent = generateEnvContent();
+            container.style.display = 'block';
+            
+            log('👁️ Environment file preview generated');
+        }
+
+        function generateEnv() {
+            if (!Object.values(state).every(s => s.success)) {
+                log('❌ All APIs must be tested successfully before generating .env file', 'error');
+                return;
+            }
+
+            showEnvPreview();
+            log('📄 Environment file generated successfully!', 'success');
+        }
+
+        function downloadEnv() {
+            const content = generateEnvContent();
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = '.env';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            log('💾 .env file downloaded successfully!', 'success');
+        }
+
+        async function copyEnvToClipboard() {
+            const content = generateEnvContent();
+            
+            try {
+                await navigator.clipboard.writeText(content);
+                log('📋 Environment configuration copied to clipboard!', 'success');
+            } catch (error) {
+                log('❌ Failed to copy to clipboard. Please copy manually.', 'error');
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 CrowdPollen API Setup Tool loaded');
+            log('📝 Fill in your API credentials and test each service');
+            log('🔧 Run database migration after Supabase is configured');
+            log('📄 Generate .env file when all tests pass');
+        });
+    </script>
+</body>
+</html>

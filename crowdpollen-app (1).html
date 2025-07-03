@@ -1,0 +1,2338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CrowdPollen - Hyperlocal Pollen Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom variables for accessibility */
+        :root {
+            --primary-blue: #2563eb;
+            --primary-blue-light: #3b82f6;
+            --success-green: #16a34a;
+            --warning-orange: #ea580c;
+            --danger-red: #dc2626;
+            --neutral-gray: #475569;
+            --background-light: #f8fafc;
+            --text-dark: #1e293b;
+            --border-color: #cbd5e1;
+        }
+
+        /* Enhanced accessibility styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+        }
+
+        .app-container {
+            max-width: 375px;
+            margin: 0 auto;
+            background: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            border-radius: 0;
+            overflow: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        .screen {
+            display: none;
+            min-height: 100vh;
+            background: var(--background-light);
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        /* Large, accessible buttons */
+        .primary-button {
+            background: var(--primary-blue);
+            color: white;
+            padding: 18px 24px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            border: none;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+            min-height: 56px;
+        }
+
+        .primary-button:hover {
+            background: var(--primary-blue-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+        }
+
+        .primary-button:active {
+            transform: translateY(0);
+        }
+
+        .secondary-button {
+            background: white;
+            color: var(--text-dark);
+            border: 2px solid var(--border-color);
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 500;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 52px;
+        }
+
+        .secondary-button:hover {
+            border-color: var(--primary-blue);
+            background: #f1f5f9;
+        }
+
+        /* Large text for readability */
+        .large-text {
+            font-size: 20px;
+            line-height: 1.4;
+        }
+
+        .medium-text {
+            font-size: 18px;
+            line-height: 1.4;
+        }
+
+        .small-text {
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        /* High contrast colors */
+        .pollen-low { background: var(--success-green); }
+        .pollen-medium { background: var(--warning-orange); }
+        .pollen-high { background: var(--danger-red); }
+        .pollen-very-high { background: #991b1b; }
+
+        /* Simple, clear cards */
+        .info-card {
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        /* Accessible form elements */
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 12px;
+            font-size: 16px;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        /* Simple slider styling */
+        .symptom-slider input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 12px;
+            border-radius: 6px;
+            background: #e2e8f0;
+            outline: none;
+        }
+
+        .symptom-slider input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--primary-blue);
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        /* Camera simulation styles */
+        .camera-viewfinder {
+            position: relative;
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+        }
+
+        .sticky-trap-simulation {
+            width: 280px;
+            height: 180px;
+            background: white;
+            border: 3px solid #94a3b8;
+            border-radius: 12px;
+            position: relative;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        .petroleum-layer {
+            position: absolute;
+            inset: 4px;
+            background: linear-gradient(45deg, #fef3c7 0%, #fde68a 100%);
+            border-radius: 8px;
+            opacity: 0.8;
+        }
+
+        .pollen-grain {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #f59e0b;
+            border-radius: 50%;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-4px); }
+        }
+
+        .capture-button {
+            width: 80px;
+            height: 80px;
+            background: white;
+            border: 6px solid #e2e8f0;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+
+        .capture-button:active {
+            transform: scale(0.95);
+        }
+
+        .capture-button-inner {
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 50%;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* Navigation styles */
+        .bottom-nav {
+            background: white;
+            border-top: 2px solid var(--border-color);
+            padding: 12px 0;
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 375px;
+            z-index: 100;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border-radius: 8px;
+            min-height: 60px;
+        }
+
+        .nav-item.active {
+            background: #eff6ff;
+            color: var(--primary-blue);
+        }
+
+        .nav-item:hover {
+            background: #f1f5f9;
+        }
+
+        .nav-icon {
+            width: 28px;
+            height: 28px;
+            margin-bottom: 4px;
+        }
+
+        .nav-text {
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        /* Modal styles */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 200;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-backdrop.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            background: white;
+            border-radius: 20px;
+            padding: 24px;
+            width: 90%;
+            max-width: 320px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .modal-backdrop.active .modal-content {
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        /* Status indicators */
+        .status-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+
+        /* Progress indicators */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary-blue);
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 375px) {
+            .app-container {
+                border-radius: 0;
+                max-width: 100%;
+            }
+        }
+
+        /* Focus styles for accessibility */
+        button:focus,
+        input:focus,
+        .nav-item:focus {
+            outline: 3px solid var(--primary-blue);
+            outline-offset: 2px;
+        }
+
+        /* High contrast mode support */
+        @media (prefers-contrast: high) {
+            .info-card {
+                border-width: 3px;
+            }
+            
+            .primary-button {
+                border: 2px solid white;
+            }
+        }
+
+        /* Reduced motion support */
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Setup guide banner */
+        .setup-guide-banner {
+            background: #fef3c7;
+            border-bottom: 2px solid #fbbf24;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            transition: background 0.2s ease;
+        }
+
+        .setup-guide-banner:hover {
+            background: #fde68a;
+        }
+
+        /* Success banner */
+        .success-banner {
+            background: #d1fae5;
+            border: 2px solid var(--success-green);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body style="margin: 0; padding: 0; background: #f1f5f9;">
+    <div class="app-container" id="app">
+        
+        <!-- Developer Testing Toggle - Small and unobtrusive -->
+        <div style="background: #334155; color: white; padding: 4px 12px; display: flex; justify-content: space-between; align-items: center; font-size: 11px; border-bottom: 1px solid #475569;">
+            <span style="opacity: 0.7;">Demo:</span>
+            <button id="login-toggle" onclick="toggleLoginState()" style="background: rgba(255,255,255,0.15); color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 10px; cursor: pointer;">
+                View as Logged In
+            </button>
+        </div>
+        
+        <!-- Home Screen -->
+        <div id="home-screen" class="screen active">
+            <!-- Setup Guide Banner -->
+            <div class="setup-guide-banner" onclick="showInstructions()">
+                <div style="display: flex; align-items: center;">
+                    <span style="font-size: 20px; margin-right: 12px;">🧰</span>
+                    <div>
+                        <div style="font-weight: 600; color: #92400e;">Need to make a pollen trap?</div>
+                        <div style="font-size: 12px; color: #78350f;">Simple 5-minute DIY guide →</div>
+                    </div>
+                </div>
+                <svg width="20" height="20" fill="none" stroke="#92400e" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+
+            <!-- Header -->
+            <div style="background: linear-gradient(135deg, var(--primary-blue) 0%, #1d4ed8 100%); color: white; padding: 24px 20px 32px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+                    <h1 class="large-text" style="margin: 0; font-weight: 700;">🌿 CrowdPollen</h1>
+                    <button onclick="showSettings()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                        </svg>
+                    </button>
+                </div>
+                <p class="medium-text" style="margin: 0 0 8px; opacity: 0.9;">Track Pollen Levels</p>
+                <p class="small-text" style="margin: 0; opacity: 0.7;">Get personalized allergy insights for your neighborhood</p>
+            </div>
+
+            <!-- Today's Status Card -->
+            <div style="padding: 0 20px; margin-top: -16px;">
+                
+                <!-- Guest Welcome/Location Card -->
+                <div id="guest-welcome-card" class="info-card" style="background: #f0f9ff; border-color: #0ea5e9; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="flex: 1;">
+                            <h3 class="medium-text" style="font-weight: 700; margin-bottom: 8px; color: var(--primary-blue);">
+                                📍 <span id="location-display">Enter ZIP code</span>
+                            </h3>
+                            <div id="weather-display" style="font-size: 14px; color: var(--neutral-gray); margin-bottom: 12px;">
+                                🌤️ <button onclick="promptForZipCode()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 14px; padding: 0;">Add location for weather</button>
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <button id="location-toggle" onclick="toggleLocationMode()" style="background: none; border: none; color: var(--neutral-gray); font-size: 12px; cursor: pointer; padding: 2px;" title="Toggle location method">
+                                📍
+                            </button>
+                        </div>
+                    </div>
+                    <p class="small-text" style="color: var(--neutral-gray); margin-bottom: 12px;">
+                        Your data helps improve local pollen forecasts for everyone.
+                    </p>
+                    <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px;">
+                        <button onclick="showLogin()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0;">Create account</button>
+                        <span style="color: #cbd5e1;">•</span>
+                        <button onclick="showPrivacyPolicy()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0;">Privacy Policy</button>
+                        <span style="color: #cbd5e1;">•</span>
+                        <button onclick="showInstructions()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 12px; padding: 0;">Setup Guide</button>
+                    </div>
+                </div>
+
+                <!-- User Welcome Card (when logged in) -->
+                <div id="user-welcome-card" class="info-card" style="background: #f0fdf4; border-color: var(--success-green); margin-bottom: 16px; display: none;">
+                    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px;">
+                        <div style="flex: 1;">
+                            <h3 class="medium-text" style="font-weight: 700; margin-bottom: 8px; color: var(--success-green);">
+                                👋 Welcome back, John!
+                            </h3>
+                            <div style="font-size: 14px; color: var(--neutral-gray); margin-bottom: 4px;">
+                                📍 <span id="user-location-display">Downtown Portland, OR 97201</span>
+                            </div>
+                            <div id="user-weather-display" style="font-size: 14px; color: var(--neutral-gray); margin-bottom: 12px;">
+                                🌤️ 72°F, Partly Cloudy, Light breeze
+                            </div>
+                        </div>
+                        <div style="display: flex; flex-direction: column; gap: 4px;">
+                            <button onclick="toggleLocationMode()" style="background: none; border: none; color: var(--neutral-gray); font-size: 12px; cursor: pointer; padding: 2px;" title="Update location">
+                                📍
+                            </button>
+                        </div>
+                    </div>
+                    <div style="background: rgba(22, 163, 74, 0.1); padding: 12px; border-radius: 8px;">
+                        <p style="font-size: 14px; margin: 0; color: var(--success-green);">
+                            💡 Based on your tree pollen allergy profile and today's conditions
+                        </p>
+                    </div>
+                </div>
+
+                <div class="info-card" id="pollen-status-card">
+                    <div style="text-align: center;">
+                        <div style="font-size: 48px; margin-bottom: 8px;">🌿</div>
+                        <div class="large-text" style="font-weight: 700; margin-bottom: 8px; color: var(--success-green);" id="today-status">Low Pollen Today</div>
+                        <div class="small-text" style="color: var(--neutral-gray);" id="status-subtitle">Last updated 2 hours ago • 47 local reports</div>
+                    </div>
+                </div>
+                
+                <!-- US Overview Card (shown when no location) -->
+                <div class="info-card" id="us-overview-card" style="display: none;">
+                    <div style="text-align: center; margin-bottom: 16px;">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 8px;">US Pollen Overview</h3>
+                        <p class="small-text" style="color: var(--neutral-gray); margin-bottom: 16px;">Add your location for personalized data</p>
+                    </div>
+                    
+                    <!-- Simple US Map -->
+                    <div style="position: relative; width: 100%; height: 120px; background: #f0f9ff; border-radius: 12px; overflow: hidden; margin-bottom: 16px;">
+                        <!-- Complete US Map Shape -->
+                        <svg viewBox="0 0 500 250" style="width: 100%; height: 100%;">
+                            <!-- Background -->
+                            <rect width="500" height="250" fill="#f0f9ff"/>
+                            
+                            <!-- Alaska -->
+                            <path d="M 20 180 L 40 175 L 50 185 L 45 200 L 30 205 L 20 195 Z" 
+                                  fill="#3b82f6" opacity="0.7" stroke="white" stroke-width="0.5"/>
+                            
+                            <!-- Hawaii -->
+                            <circle cx="80" cy="195" r="8" fill="#16a34a" opacity="0.7" stroke="white" stroke-width="0.5"/>
+                            
+                            <!-- Continental US outline -->
+                            <path d="M 100 120 L 105 100 L 120 90 L 140 85 L 180 80 L 220 75 L 260 70 L 300 65 L 340 60 L 380 65 L 400 70 L 420 80 L 425 90 L 430 100 L 435 110 L 430 120 L 420 125 L 400 130 L 380 135 L 360 140 L 340 145 L 320 150 L 300 155 L 280 160 L 260 165 L 240 170 L 220 175 L 200 180 L 180 185 L 160 180 L 140 175 L 120 170 L 110 160 L 105 150 L 100 140 L 95 130 Z" 
+                                  fill="none" stroke="#94a3b8" stroke-width="2"/>
+                            
+                            <!-- Regional fills -->
+                            <!-- West -->
+                            <path d="M 100 120 L 105 100 L 120 90 L 140 120 L 130 150 L 110 160 L 100 140 Z" 
+                                  fill="#ea580c" opacity="0.6"/>
+                            <!-- Southwest -->
+                            <path d="M 140 120 L 140 85 L 180 80 L 180 140 L 160 150 L 130 150 Z" 
+                                  fill="#ea580c" opacity="0.7"/>
+                            <!-- Central -->
+                            <path d="M 180 80 L 260 70 L 260 140 L 180 140 Z" 
+                                  fill="#ea580c" opacity="0.6"/>
+                            <!-- Texas -->
+                            <path d="M 180 140 L 240 140 L 250 160 L 240 180 L 200 180 L 180 170 L 170 150 Z" 
+                                  fill="#dc2626" opacity="0.8"/>
+                            <!-- Southeast -->
+                            <path d="M 260 140 L 340 130 L 350 150 L 340 170 L 300 175 L 260 165 Z" 
+                                  fill="#dc2626" opacity="0.7"/>
+                            <!-- Florida -->
+                            <path d="M 340 155 L 350 160 L 355 180 L 350 190 L 340 185 L 335 170 Z" 
+                                  fill="#dc2626" opacity="0.8"/>
+                            <!-- Northeast -->
+                            <path d="M 340 60 L 420 80 L 430 110 L 420 125 L 380 135 L 340 130 L 340 90 Z" 
+                                  fill="#16a34a" opacity="0.7"/>
+                            <!-- Midwest -->
+                            <path d="M 260 70 L 340 60 L 340 130 L 260 140 Z" 
+                                  fill="#ea580c" opacity="0.5"/>
+                            
+                            <!-- Title -->
+                            <text x="250" y="30" font-size="16" fill="#1e293b" font-weight="700" text-anchor="middle">US Pollen Levels</text>
+                        </svg>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 14px;">
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 12px; height: 12px; background: var(--success-green); border-radius: 2px; margin-right: 6px;"></div>
+                            <span>Northeast: Low</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 12px; height: 12px; background: var(--warning-orange); border-radius: 2px; margin-right: 6px;"></div>
+                            <span>West: Medium</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 12px; height: 12px; background: var(--warning-orange); border-radius: 2px; margin-right: 6px;"></div>
+                            <span>Midwest: High</span>
+                        </div>
+                        <div style="display: flex; align-items: center;">
+                            <div style="width: 12px; height: 12px; background: var(--danger-red); border-radius: 2px; margin-right: 6px;"></div>
+                            <span>South: Very High</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Actions -->
+            <div style="padding: 20px; padding-bottom: 100px;">
+                
+                <!-- Personalized Recommendations for Logged In Users -->
+                <div id="personalized-recommendations" style="display: none;">
+                    
+                    <!-- Today's Action Card -->
+                    <div class="info-card" style="background: #fef3c7; border-color: var(--warning-orange); margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <span style="font-size: 24px; margin-right: 12px;">💊</span>
+                            <h3 class="medium-text" style="font-weight: 700; margin: 0; color: var(--warning-orange);">Take Action Today</h3>
+                        </div>
+                        <div id="medication-reminder" style="background: rgba(234, 88, 12, 0.1); padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+                            <p style="font-size: 14px; margin: 0; color: var(--text-dark); font-weight: 600;">
+                                Consider taking your Claritin now - oak pollen levels are rising in your area.
+                            </p>
+                        </div>
+                        <div style="display: flex; gap: 12px; font-size: 14px;">
+                            <button onclick="markMedicationTaken()" style="background: var(--success-green); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                ✓ Took Medication
+                            </button>
+                            <button onclick="snoozeReminder()" style="background: var(--neutral-gray); color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                Remind Later
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Weekly Insights -->
+                    <div class="info-card" style="background: #f0fdf4; border-color: var(--success-green); margin-bottom: 16px;">
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <span style="font-size: 24px; margin-right: 12px;">📊</span>
+                            <h3 class="medium-text" style="font-weight: 700; margin: 0; color: var(--success-green);">Your Week Ahead</h3>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 14px; color: var(--neutral-gray);">Tomorrow (Thu)</span>
+                                <div style="display: flex; align-items: center;">
+                                    <div style="width: 12px; height: 12px; background: var(--danger-red); border-radius: 50%; margin-right: 6px;"></div>
+                                    <span style="font-size: 14px; font-weight: 600; color: var(--danger-red);">High</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <span style="font-size: 14px; color: var(--neutral-gray);">Friday</span>
+                                <div style="display: flex; align-items: center;">
+                                    <div style="width: 12px; height: 12px; background: var(--warning-orange); border-radius: 50%; margin-right: 6px;"></div>
+                                    <span style="font-size: 14px; font-weight: 600; color: var(--warning-orange);">Medium</span>
+                                </div>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 14px; color: var(--neutral-gray);">Weekend</span>
+                                <div style="display: flex; align-items: center;">
+                                    <div style="width: 12px; height: 12px; background: var(--success-green); border-radius: 50%; margin-right: 6px;"></div>
+                                    <span style="font-size: 14px; font-weight: 600; color: var(--success-green);">Low</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="background: rgba(22, 163, 74, 0.1); padding: 12px; border-radius: 8px;">
+                            <p style="font-size: 14px; margin: 0; color: var(--success-green);">
+                                💡 <strong>Perfect weekend for outdoor activities!</strong> Pollen levels drop significantly Saturday-Sunday.
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Activity Recommendations -->
+                    <div class="info-card" style="background: #eff6ff; border-color: var(--primary-blue);">
+                        <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                            <span style="font-size: 24px; margin-right: 12px;">🎯</span>
+                            <h3 class="medium-text" style="font-weight: 700; margin: 0; color: var(--primary-blue);">Smart Timing</h3>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 16px;">✓</span>
+                                <span style="font-size: 14px;">Best time for jogging: <strong>6-8 AM</strong> (lowest pollen)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--warning-orange); margin-right: 8px; font-size: 16px;">⚠️</span>
+                                <span style="font-size: 14px;">Avoid: <strong>10 AM - 4 PM</strong> (peak pollen hours)</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <span style="color: var(--primary-blue); margin-right: 8px; font-size: 16px;">🌧️</span>
+                                <span style="font-size: 14px;">Rain expected Friday - <strong>great day to be outside!</strong></span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 12px;">
+                    <div class="nav-item active" onclick="showHome()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                        </svg>
+                        <span class="nav-text">Home</span>
+                    </div>
+                    <div class="nav-item" onclick="showCamera()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586l-.707-.707A1 1 0 0013 4h-6a1 1 0 00-.707.293L5.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Submit</span>
+                    </div>
+                    <div class="nav-item" onclick="showMap()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Map</span>
+                    </div>
+                    <div class="nav-item" onclick="showSymptomLog()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Log</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Camera Screen -->
+        <div id="camera-screen" class="screen">
+            <div class="camera-viewfinder" style="height: 100vh; display: flex; flex-direction: column; position: relative;">
+                
+                <!-- Top Bar -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 10; padding: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <button onclick="showHome()" style="background: rgba(0,0,0,0.5); border: none; color: white; padding: 12px; border-radius: 50%; cursor: pointer;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <div style="background: rgba(0,0,0,0.7); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">
+                        Center trap in frame
+                    </div>
+                    <button onclick="showInstructions()" style="background: rgba(0,0,0,0.5); border: none; color: white; padding: 8px 12px; border-radius: 20px; cursor: pointer; font-size: 12px;">
+                        📖 Guide
+                    </button>
+                </div>
+
+                <!-- Camera View -->
+                <div style="flex: 1; display: flex; align-items: center; justify-content: center; position: relative;">
+                    <div class="sticky-trap-simulation">
+                        <div class="petroleum-layer"></div>
+                        
+                        <!-- Pollen grains -->
+                        <div class="pollen-grain" style="top: 20px; left: 40px;"></div>
+                        <div class="pollen-grain" style="top: 45px; left: 80px; animation-delay: 0.5s;"></div>
+                        <div class="pollen-grain" style="top: 30px; left: 120px; animation-delay: 1s;"></div>
+                        <div class="pollen-grain" style="top: 60px; left: 60px; animation-delay: 1.5s;"></div>
+                        <div class="pollen-grain" style="top: 50px; left: 100px; animation-delay: 2s;"></div>
+                        <div class="pollen-grain" style="top: 35px; left: 140px; animation-delay: 2.5s;"></div>
+                        
+                        <!-- Frame guide -->
+                        <div style="position: absolute; inset: -8px; border: 3px dashed #fbbf24; border-radius: 16px; opacity: 0.8;"></div>
+                    </div>
+                </div>
+
+                <!-- Capture Button -->
+                <div style="padding: 40px; display: flex; justify-content: center;">
+                    <button class="capture-button" onclick="capturePhoto()">
+                        <div class="capture-button-inner"></div>
+                    </button>
+                </div>
+
+                <!-- Flash effect -->
+                <div id="flash-overlay" style="position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; transition: opacity 0.15s;"></div>
+            </div>
+        </div>
+
+        <!-- Processing Screen -->
+        <div id="processing-screen" class="screen">
+            <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center;">
+                <div style="font-size: 80px; margin-bottom: 24px; animation: spin 2s linear infinite;">🌿</div>
+                <h2 class="large-text" style="font-weight: 700; margin-bottom: 16px; color: var(--text-dark);">Analyzing Sample</h2>
+                <p class="medium-text" style="color: var(--neutral-gray); margin-bottom: 40px;">Our AI is counting pollen grains...</p>
+                
+                <div style="width: 100%; max-width: 280px; margin-bottom: 16px;">
+                    <div class="progress-container">
+                        <div id="progress-bar" class="progress-bar" style="width: 0%;"></div>
+                    </div>
+                </div>
+                
+                <div id="progress-text" class="small-text" style="color: var(--neutral-gray);">Uploading image...</div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <div style="height: 100vh; overflow-y: auto; padding-bottom: 100px;">
+                
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, var(--primary-blue) 0%, #1d4ed8 100%); color: white; padding: 24px 20px 32px;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <div style="text-align: center;">
+                        <div id="result-icon" style="font-size: 64px; margin-bottom: 12px;">🌿</div>
+                        <h1 id="result-level" class="large-text" style="font-weight: 700; margin-bottom: 8px;">Medium Pollen Level</h1>
+                        <p id="result-count" style="opacity: 0.9;">23 grains detected with 87% confidence</p>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 20px;">
+                    
+                    <!-- Success Banner -->
+                    <div class="success-banner">
+                        <span style="font-size: 24px; margin-right: 12px;">✅</span>
+                        <div>
+                            <div style="font-weight: 600; margin-bottom: 4px;">Data Successfully Saved!</div>
+                            <div style="font-size: 14px; color: var(--neutral-gray);">Your reading has been added to the community database</div>
+                        </div>
+                    </div>
+
+                    <!-- Location Card (if no location set) -->
+                    <div id="results-location-card" class="info-card" style="background: #fef3c7; border-color: #fbbf24; display: none;">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 12px; display: flex; align-items: center;">
+                            <span style="margin-right: 8px;">📍</span>
+                            Add Location
+                        </h3>
+                        <p class="small-text" style="color: var(--neutral-gray); margin-bottom: 16px;">
+                            Help improve local forecasts by adding your location to this reading.
+                        </p>
+                        <button onclick="promptForResultsLocation()" class="primary-button">
+                            Add ZIP Code
+                        </button>
+                    </div>
+
+                    <!-- Main Results -->
+                    <div class="info-card">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Detection Results</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                            <div style="background: #fef3c7; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div class="large-text" style="font-weight: 700; color: #d97706;">23</div>
+                                <div class="small-text" style="color: var(--neutral-gray);">Total Grains</div>
+                            </div>
+                            <div style="background: #eff6ff; padding: 20px; border-radius: 12px; text-align: center;">
+                                <div class="large-text" style="font-weight: 700; color: var(--primary-blue);">87%</div>
+                                <div class="small-text" style="color: var(--neutral-gray);">Confidence</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pollen Types -->
+                    <div class="info-card">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Pollen Types Found</h3>
+                        <div style="space-y: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+                                <span class="small-text">Oak Tree</span>
+                                <span class="small-text" style="font-weight: 600;">12 grains</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;">
+                                <span class="small-text">Birch Tree</span>
+                                <span class="small-text" style="font-weight: 600;">8 grains</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px;">
+                                <span class="small-text">Grass</span>
+                                <span class="small-text" style="font-weight: 600;">3 grains</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Personal Recommendation (for logged in users) -->
+                    <div id="personal-advice-card" class="info-card" style="background: #fef3c7; border-color: #fbbf24; display: none;">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 12px; display: flex; align-items: center;">
+                            <span style="margin-right: 8px;">💡</span>
+                            Personal Advice
+                        </h3>
+                        <p class="small-text" style="margin-bottom: 12px; color: var(--neutral-gray);">Based on your allergy profile:</p>
+                        <p class="small-text" style="color: var(--text-dark);">Consider taking your allergy medication today. Oak pollen levels are moderate and may trigger your tree allergies.</p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div style="margin-top: 24px;">
+                        <div style="margin-bottom: 12px;">
+                            <button onclick="showSymptomLogFromResults()" class="primary-button">
+                                Log How You Feel
+                            </button>
+                        </div>
+                        <div style="margin-bottom: 12px;">
+                            <button onclick="showMap()" class="secondary-button">
+                                View Neighborhood Map
+                            </button>
+                        </div>
+                        <div>
+                            <button onclick="showCamera()" class="secondary-button">
+                                Take Another Photo
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Symptom Log Screen -->
+        <div id="symptom-log-screen" class="screen">
+            <div style="height: 100vh; overflow-y: auto; padding-bottom: 100px;">
+                
+                <!-- Header - Non-logged in -->
+                <div id="symptom-header-guest" style="background: linear-gradient(135deg, var(--success-green) 0%, #15803d 100%); color: white; padding: 24px 20px 32px;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="large-text" style="font-weight: 700; margin-bottom: 8px;">How Are You Feeling?</h1>
+                    <p style="opacity: 0.9;">Help improve community pollen forecasts</p>
+                </div>
+
+                <!-- Header - Logged in -->
+                <div id="symptom-header-user" style="background: linear-gradient(135deg, var(--success-green) 0%, #15803d 100%); color: white; padding: 24px 20px 32px; display: none;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="large-text" style="font-weight: 700; margin-bottom: 8px;">Hi John! How are you feeling?</h1>
+                    <p style="opacity: 0.9;">Track symptoms for personalized insights</p>
+                    <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 8px; margin-top: 12px;">
+                        <p style="font-size: 14px; margin: 0; opacity: 0.95;">💡 Based on your tree pollen allergy profile</p>
+                    </div>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 20px;">
+                    
+                    <!-- Date -->
+                    <div class="info-card" style="text-align: center; margin-bottom: 24px;">
+                        <div class="medium-text" style="font-weight: 600; margin-bottom: 4px;" id="current-date">Today, March 15</div>
+                        <div class="small-text" style="color: var(--neutral-gray);" id="current-time">2:30 PM</div>
+                    </div>
+
+                    <!-- Symptoms -->
+                    <div class="info-card">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 24px;">Symptom Levels</h2>
+                        
+                        <!-- Congestion -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="small-text" style="font-weight: 600;">🤧 Stuffy Nose</label>
+                                <span id="congestion-value" class="small-text" style="color: var(--neutral-gray);">None</span>
+                            </div>
+                            <div class="symptom-slider">
+                                <input type="range" id="congestion" min="0" max="4" value="0" oninput="updateSymptom('congestion', this.value)">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                                <span style="font-size: 12px; color: var(--neutral-gray);">None</span>
+                                <span style="font-size: 12px; color: var(--neutral-gray);">Severe</span>
+                            </div>
+                        </div>
+
+                        <!-- Itchy Eyes -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="small-text" style="font-weight: 600;">👁️ Itchy Eyes</label>
+                                <span id="eyes-value" class="small-text" style="color: var(--neutral-gray);">None</span>
+                            </div>
+                            <div class="symptom-slider">
+                                <input type="range" id="eyes" min="0" max="4" value="0" oninput="updateSymptom('eyes', this.value)">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                                <span style="font-size: 12px; color: var(--neutral-gray);">None</span>
+                                <span style="font-size: 12px; color: var(--neutral-gray);">Severe</span>
+                            </div>
+                        </div>
+
+                        <!-- Sneezing -->
+                        <div style="margin-bottom: 24px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="small-text" style="font-weight: 600;">🤧 Sneezing</label>
+                                <span id="sneezing-value" class="small-text" style="color: var(--neutral-gray);">None</span>
+                            </div>
+                            <div class="symptom-slider">
+                                <input type="range" id="sneezing" min="0" max="4" value="0" oninput="updateSymptom('sneezing', this.value)">
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-top: 4px;">
+                                <span style="font-size: 12px; color: var(--neutral-gray);">None</span>
+                                <span style="font-size: 12px; color: var(--neutral-gray);">Severe</span>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- Medication -->
+                    <div class="info-card">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Medication Today</h3>
+                        <label style="display: flex; align-items: center; cursor: pointer;">
+                            <input type="checkbox" id="took-medication" style="width: 20px; height: 20px; margin-right: 12px; accent-color: var(--primary-blue);">
+                            <span class="small-text">I took my allergy medication today</span>
+                        </label>
+                    </div>
+
+                    <!-- Anonymous Data Notice (for guests) -->
+                    <div id="anonymous-data-notice" class="info-card" style="background: #eff6ff; border-color: var(--primary-blue);">
+                        <h3 class="small-text" style="font-weight: 600; margin-bottom: 8px; display: flex; align-items: center;">
+                            <span style="margin-right: 8px;">🔒</span>
+                            Your Privacy Matters
+                        </h3>
+                        <p style="font-size: 14px; color: var(--neutral-gray); margin: 0;">
+                            Your symptom data will be shared anonymously to help improve local pollen forecasts. No personal information is collected.
+                        </p>
+                    </div>
+
+                    <!-- User profile insights -->
+                    <div id="user-insights" class="info-card" style="background: #fef3c7; border-color: var(--warning-orange); display: none;">
+                        <h3 class="medium-text" style="font-weight: 700; margin-bottom: 12px; display: flex; align-items: center;">
+                            <span style="margin-right: 8px;">💡</span>
+                            Personal Insights
+                        </h3>
+                        <p class="small-text" style="color: var(--neutral-gray); margin-bottom: 12px;">
+                            Based on today's medium oak pollen levels and your allergy profile:
+                        </p>
+                        <div style="margin-left: 16px; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                                <span style="color: var(--warning-orange); margin-right: 8px;">⚠️</span>
+                                <span class="small-text">Oak pollen may trigger your symptoms</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 6px;">
+                                <span style="color: var(--primary-blue); margin-right: 8px;">💊</span>
+                                <span class="small-text">Consider taking Claritin preventively</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <span style="color: var(--success-green); margin-right: 8px;">🌿</span>
+                                <span class="small-text">Birch season is ending - good news!</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Save Button - Guest -->
+                    <div id="save-button-guest" style="margin-top: 24px;">
+                        <button onclick="saveSymptomLog()" class="primary-button">
+                            Submit Anonymous Data
+                        </button>
+                    </div>
+
+                    <!-- Save Button - User -->
+                    <div id="save-button-user" style="margin-top: 24px; display: none;">
+                        <button onclick="saveSymptomLog()" class="primary-button">
+                            Save to My Profile
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Screen -->
+        <div id="map-screen" class="screen">
+            <div style="height: 100vh; position: relative;">
+                
+                <!-- Header -->
+                <div style="position: absolute; top: 0; left: 0; right: 0; z-index: 10; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 16px 20px; border-bottom: 2px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <button onclick="showHome()" style="background: none; border: none; color: var(--neutral-gray); padding: 8px; cursor: pointer;">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                            </svg>
+                        </button>
+                        <h2 class="medium-text" style="font-weight: 700; margin: 0;" id="map-title">US Pollen Levels</h2>
+                        <button onclick="refreshMap()" style="background: none; border: none; color: var(--primary-blue); padding: 8px; cursor: pointer;">
+                            <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Location Required Notice (when no location) -->
+                <div id="location-required-notice" style="position: absolute; top: 72px; left: 20px; right: 20px; z-index: 10; background: #fef3c7; border: 2px solid #fbbf24; border-radius: 12px; padding: 16px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 20px; margin-right: 8px;">📍</span>
+                        <h3 style="font-weight: 600; margin: 0; color: #d97706;">Add Location for Personalized Data</h3>
+                    </div>
+                    <p style="font-size: 14px; color: var(--neutral-gray); margin-bottom: 12px;">
+                        See nearby pollen traps and hyperlocal forecasts by adding your location.
+                    </p>
+                    <button onclick="promptForZipCode()" style="background: var(--warning-orange); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; cursor: pointer;">
+                        Add ZIP Code
+                    </button>
+                </div>
+
+                <!-- Map Content -->
+                <div id="countrywide-map" style="width: 100%; height: 100%; background: #f8fafc; padding-top: 72px; position: relative;">
+                    
+                    <!-- Clean US Map -->
+                    <div style="padding: 20px;">
+                        <div style="background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            
+                            <!-- Simplified US Map Visualization -->
+                            <div style="position: relative; width: 100%; height: 200px; background: #e0e7ff; border-radius: 12px; overflow: hidden; margin-bottom: 20px;">
+                                <!-- US Map Shape -->
+                                <svg viewBox="0 0 500 300" style="width: 100%; height: 100%;">
+                                    <!-- Background -->
+                                    <rect width="500" height="300" fill="#e0e7ff"/>
+                                    
+                                    <!-- West Coast -->
+                                    <path d="M 30 50 L 60 40 L 70 60 L 75 100 L 70 150 L 60 170 L 45 180 L 30 170 L 25 120 Z" 
+                                          fill="#ea580c" opacity="0.7" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Mountain/Southwest -->
+                                    <path d="M 60 40 L 110 35 L 120 50 L 125 140 L 110 160 L 70 150 L 75 100 L 70 60 Z" 
+                                          fill="#ea580c" opacity="0.6" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Plains/Midwest -->
+                                    <path d="M 110 35 L 200 30 L 210 45 L 215 130 L 200 145 L 125 140 L 120 50 Z" 
+                                          fill="#ea580c" opacity="0.7" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Texas -->
+                                    <path d="M 125 140 L 200 145 L 210 160 L 220 200 L 200 220 L 170 225 L 140 215 L 120 190 L 110 160 Z" 
+                                          fill="#dc2626" opacity="0.7" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Southeast -->
+                                    <path d="M 210 130 L 280 125 L 320 140 L 340 180 L 320 210 L 280 220 L 220 215 L 210 200 L 215 160 Z" 
+                                          fill="#dc2626" opacity="0.7" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Florida -->
+                                    <path d="M 280 210 L 300 215 L 310 240 L 305 260 L 290 265 L 275 255 L 270 230 Z" 
+                                          fill="#dc2626" opacity="0.8" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Northeast -->
+                                    <path d="M 280 30 L 360 25 L 420 35 L 440 60 L 420 85 L 380 95 L 320 85 L 290 70 L 285 45 Z" 
+                                          fill="#16a34a" opacity="0.7" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Great Lakes Region -->
+                                    <path d="M 200 30 L 280 30 L 285 45 L 290 70 L 280 90 L 230 95 L 215 80 L 210 45 Z" 
+                                          fill="#ea580c" opacity="0.6" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Mid-Atlantic -->
+                                    <path d="M 320 85 L 380 95 L 370 120 L 340 130 L 320 125 L 310 105 Z" 
+                                          fill="#16a34a" opacity="0.6" stroke="white" stroke-width="1"/>
+                                    
+                                    <!-- Region Labels -->
+                                    <text x="50" y="110" font-size="14" fill="white" font-weight="700" text-anchor="middle">CA</text>
+                                    <text x="165" y="90" font-size="14" fill="white" font-weight="700" text-anchor="middle">Central</text>
+                                    <text x="170" y="190" font-size="14" fill="white" font-weight="700" text-anchor="middle">TX</text>
+                                    <text x="280" y="180" font-size="14" fill="white" font-weight="700" text-anchor="middle">South</text>
+                                    <text x="290" y="250" font-size="12" fill="white" font-weight="700" text-anchor="middle">FL</text>
+                                    <text x="360" y="60" font-size="14" fill="white" font-weight="700" text-anchor="middle">Northeast</text>
+                                </svg>
+                                
+                                <!-- Title overlay -->
+                                <div style="position: absolute; top: 16px; left: 16px; background: rgba(255,255,255,0.9); padding: 8px 12px; border-radius: 8px;">
+                                    <h3 style="font-size: 16px; font-weight: 700; margin: 0;">Today's Pollen Levels</h3>
+                                </div>
+                            </div>
+                            
+                            <!-- Regional breakdown -->
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                                <div>
+                                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-dark);">High Alert Regions</h4>
+                                    <div style="space-y: 8px;">
+                                        <div style="display: flex; align-items: center; padding: 8px; background: #fee2e2; border-radius: 8px;">
+                                            <div style="width: 8px; height: 8px; background: var(--danger-red); border-radius: 50%; margin-right: 8px;"></div>
+                                            <span style="font-size: 14px; font-weight: 500;">Southern States</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; padding: 8px; background: #fed7aa; border-radius: 8px;">
+                                            <div style="width: 8px; height: 8px; background: var(--warning-orange); border-radius: 50%; margin-right: 8px;"></div>
+                                            <span style="font-size: 14px; font-weight: 500;">Central Plains</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text-dark);">Low Alert Regions</h4>
+                                    <div style="space-y: 8px;">
+                                        <div style="display: flex; align-items: center; padding: 8px; background: #d1fae5; border-radius: 8px;">
+                                            <div style="width: 8px; height: 8px; background: var(--success-green); border-radius: 50%; margin-right: 8px;"></div>
+                                            <span style="font-size: 14px; font-weight: 500;">Northeast Coast</span>
+                                        </div>
+                                        <div style="display: flex; align-items: center; padding: 8px; background: #e0e7ff; border-radius: 8px;">
+                                            <div style="width: 8px; height: 8px; background: var(--primary-blue); border-radius: 50%; margin-right: 8px;"></div>
+                                            <span style="font-size: 14px; font-weight: 500;">Pacific Northwest</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Local Map (when location is available) -->
+                <div id="local-map" style="width: 100%; height: 100%; background: #f8fafc; padding-top: 72px; position: relative; display: none;">
+                    <div style="padding: 20px;">
+                        <!-- Map container -->
+                        <div style="background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 20px;">
+                            <!-- Simple street map -->
+                            <div style="position: relative; height: 300px; background: #e5e7eb;">
+                                <!-- Grid lines -->
+                                <div style="position: absolute; inset: 0;">
+                                    <div style="position: absolute; top: 33%; left: 0; right: 0; height: 1px; background: #d1d5db;"></div>
+                                    <div style="position: absolute; top: 66%; left: 0; right: 0; height: 1px; background: #d1d5db;"></div>
+                                    <div style="position: absolute; left: 33%; top: 0; bottom: 0; width: 1px; background: #d1d5db;"></div>
+                                    <div style="position: absolute; left: 66%; top: 0; bottom: 0; width: 1px; background: #d1d5db;"></div>
+                                </div>
+                                
+                                <!-- Data points -->
+                                <div style="position: absolute; top: 25%; left: 20%; width: 40px; height: 40px; background: var(--success-green); border: 4px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2;" onclick="showDataPoint('low', 8)">
+                                    <span style="color: white; font-weight: 700; font-size: 14px;">8</span>
+                                </div>
+                                
+                                <div style="position: absolute; top: 60%; left: 70%; width: 40px; height: 40px; background: var(--warning-orange); border: 4px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2;" onclick="showDataPoint('medium', 23)">
+                                    <span style="color: white; font-weight: 700; font-size: 14px;">23</span>
+                                </div>
+                                
+                                <div style="position: absolute; top: 75%; left: 40%; width: 40px; height: 40px; background: var(--danger-red); border: 4px solid white; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 2;" onclick="showDataPoint('high', 45)">
+                                    <span style="color: white; font-weight: 700; font-size: 14px;">45</span>
+                                </div>
+                                
+                                <!-- User location -->
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 24px; height: 24px; background: var(--primary-blue); border: 4px solid white; border-radius: 50%; box-shadow: 0 0 0 8px rgba(37, 99, 235, 0.2), 0 2px 8px rgba(0,0,0,0.2); z-index: 3;">
+                                    <div style="position: absolute; inset: -20px; border: 2px solid var(--primary-blue); border-radius: 50%; opacity: 0.3; animation: pulse 2s infinite;"></div>
+                                </div>
+                                
+                                <!-- Location label -->
+                                <div style="position: absolute; top: 16px; left: 16px; background: rgba(255,255,255,0.95); padding: 8px 12px; border-radius: 8px; font-size: 14px; font-weight: 600;">
+                                    Your Neighborhood
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent readings -->
+                        <div style="background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+                            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 12px;">Nearby Readings</h3>
+                            <div style="space-y: 12px;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="width: 12px; height: 12px; background: var(--success-green); border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 14px;">0.3 miles north</span>
+                                    </div>
+                                    <span style="font-size: 14px; font-weight: 600;">8 grains</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="width: 12px; height: 12px; background: var(--warning-orange); border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 14px;">0.5 miles east</span>
+                                    </div>
+                                    <span style="font-size: 14px; font-weight: 600;">23 grains</span>
+                                </div>
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div style="display: flex; align-items: center;">
+                                        <div style="width: 12px; height: 12px; background: var(--danger-red); border-radius: 50%; margin-right: 8px;"></div>
+                                        <span style="font-size: 14px;">0.8 miles south</span>
+                                    </div>
+                                    <span style="font-size: 14px; font-weight: 600;">45 grains</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Legend -->
+                <div style="position: absolute; bottom: 100px; left: 20px; right: 20px;">
+                    <div style="background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); border-radius: 12px; padding: 12px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        <div style="display: flex; justify-content: space-around; align-items: center;">
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 12px; height: 12px; background: var(--success-green); border-radius: 50%; margin-right: 6px;"></div>
+                                <span style="font-size: 12px;">Low</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 12px; height: 12px; background: var(--warning-orange); border-radius: 50%; margin-right: 6px;"></div>
+                                <span style="font-size: 12px;">Medium</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 12px; height: 12px; background: var(--danger-red); border-radius: 50%; margin-right: 6px;"></div>
+                                <span style="font-size: 12px;">High</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <div style="width: 12px; height: 12px; background: #991b1b; border-radius: 50%; margin-right: 6px;"></div>
+                                <span style="font-size: 12px;">Very High</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Floating camera button -->
+                <button onclick="showCamera()" style="position: absolute; bottom: 160px; right: 20px; width: 56px; height: 56px; background: var(--primary-blue); color: white; border: none; border-radius: 50%; font-size: 24px; cursor: pointer; box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4); display: flex; align-items: center; justify-content: center;">
+                    📷
+                </button>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 12px;">
+                    <div class="nav-item" onclick="showHome()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                        </svg>
+                        <span class="nav-text">Home</span>
+                    </div>
+                    <div class="nav-item" onclick="showCamera()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586l-.707-.707A1 1 0 0013 4h-6a1 1 0 00-.707.293L5.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Submit</span>
+                    </div>
+                    <div class="nav-item active" onclick="showMap()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Map</span>
+                    </div>
+                    <div class="nav-item" onclick="showSymptomLog()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Log</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Screen -->
+        <div id="settings-screen" class="screen">
+            <div style="height: 100vh; overflow-y: auto; padding-bottom: 100px;">
+                
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, var(--neutral-gray) 0%, #334155 100%); color: white; padding: 24px 20px 32px;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="large-text" style="font-weight: 700; margin-bottom: 8px;">Settings</h1>
+                    <p style="opacity: 0.9;">Manage your allergy profile and preferences</p>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 20px;">
+                    
+                    <!-- Account Section -->
+                    <div class="info-card">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Account</h2>
+                        <div id="login-section">
+                            <p class="small-text" style="color: var(--neutral-gray); margin-bottom: 16px;">Create an account to save your allergy profile and get personalized recommendations.</p>
+                            <button onclick="showLogin()" class="primary-button" style="margin-bottom: 8px;">
+                                Sign In / Create Account
+                            </button>
+                            <p style="text-align: center; font-size: 12px; color: var(--neutral-gray);">
+                                You can use the app without an account too!
+                            </p>
+                        </div>
+                        <div id="account-section" style="display: none;">
+                            <div style="display: flex; align-items: center; margin-bottom: 16px;">
+                                <div style="width: 48px; height: 48px; background: #eff6ff; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 12px;">
+                                    <span style="color: var(--primary-blue); font-weight: 700; font-size: 18px;">JS</span>
+                                </div>
+                                <div>
+                                    <div style="font-weight: 600;">John Smith</div>
+                                    <div style="font-size: 14px; color: var(--neutral-gray);">john@example.com</div>
+                                </div>
+                            </div>
+                            <button onclick="logout()" style="background: none; border: none; color: var(--danger-red); font-size: 14px; cursor: pointer; text-decoration: underline;">
+                                Sign Out
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Allergy Profile -->
+                    <div class="info-card">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">My Allergies</h2>
+                        <div style="margin-bottom: 20px;">
+                            <label class="small-text" style="font-weight: 600; display: block; margin-bottom: 12px;">What are you allergic to?</label>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" checked style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Tree Pollen</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Grass Pollen</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" checked style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Weed Pollen</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Mold</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="small-text" style="font-weight: 600; display: block; margin-bottom: 12px;">How severe are your allergies?</label>
+                            <div style="space-y: 8px;">
+                                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 8px;">
+                                    <input type="radio" name="severity" value="mild" checked style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Mild - Occasional sniffles</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer; margin-bottom: 8px;">
+                                    <input type="radio" name="severity" value="moderate" style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Moderate - Regular discomfort</span>
+                                </label>
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="radio" name="severity" value="severe" style="width: 18px; height: 18px; margin-right: 8px; accent-color: var(--primary-blue);">
+                                    <span class="small-text">Severe - Significant symptoms</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Medications -->
+                    <div class="info-card">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">My Medications</h2>
+                        <div id="medication-list" style="margin-bottom: 16px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;">
+                                <div>
+                                    <div style="font-weight: 600;">Claritin</div>
+                                    <div style="font-size: 14px; color: var(--neutral-gray);">10mg daily</div>
+                                </div>
+                                <button onclick="removeMedication(this)" style="background: none; border: none; color: var(--danger-red); font-size: 14px; cursor: pointer;">Remove</button>
+                            </div>
+                        </div>
+                        <button onclick="addMedication()" style="width: 100%; border: 2px dashed var(--border-color); background: none; color: var(--neutral-gray); padding: 16px; border-radius: 8px; cursor: pointer; font-size: 14px;">
+                            + Add Medication
+                        </button>
+                    </div>
+
+                    <!-- Notifications -->
+                    <div class="info-card">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Notifications</h2>
+                        <div style="space-y: 16px;">
+                            <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                <span class="small-text">Daily symptom reminders</span>
+                                <input type="checkbox" checked style="width: 20px; height: 20px; accent-color: var(--primary-blue);">
+                            </label>
+                            <label style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                                <span class="small-text">High pollen alerts</span>
+                                <input type="checkbox" checked style="width: 20px; height: 20px; accent-color: var(--primary-blue);">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy & Terms -->
+                    <div class="info-card" style="background: #f8fafc;">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px;">Privacy & Terms</h2>
+                        <div style="display: flex; flex-wrap: wrap; gap: 12px; font-size: 14px; color: var(--primary-blue);">
+                            <button onclick="showPrivacyPolicy()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 14px; padding: 0;">Privacy Policy</button>
+                            <span style="color: #cbd5e1;">•</span>
+                            <button onclick="showTerms()" style="background: none; border: none; color: var(--primary-blue); text-decoration: underline; cursor: pointer; font-size: 14px; padding: 0;">Terms of Service</button>
+                        </div>
+                        <div style="margin-top: 12px; font-size: 12px; color: var(--neutral-gray);">
+                            <p style="margin: 0;">🔒 Your data is encrypted and secure</p>
+                            <p style="margin: 4px 0 0;">📊 Anonymous data helps improve pollen forecasts</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 12px;">
+                    <div class="nav-item" onclick="showHome()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                        </svg>
+                        <span class="nav-text">Home</span>
+                    </div>
+                    <div class="nav-item" onclick="showCamera()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586l-.707-.707A1 1 0 0013 4h-6a1 1 0 00-.707.293L5.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Submit</span>
+                    </div>
+                    <div class="nav-item" onclick="showMap()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Map</span>
+                    </div>
+                    <div class="nav-item active" onclick="showSymptomLog()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Log</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Screen -->
+        <div id="instructions-screen" class="screen">
+            <div style="height: 100vh; overflow-y: auto; padding-bottom: 100px;">
+                
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, var(--warning-orange) 0%, #c2410c 100%); color: white; padding: 24px 20px 32px;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="large-text" style="font-weight: 700; margin-bottom: 8px;">DIY Pollen Trap</h1>
+                    <p style="opacity: 0.9;">Simple 5-minute setup guide</p>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 20px;">
+                    
+                    <!-- Materials -->
+                    <div class="info-card" style="background: #eff6ff; border-color: var(--primary-blue);">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px; display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 8px;">🧰</span>
+                            What You Need
+                        </h2>
+                        <div style="space-y: 8px;">
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 18px;">✓</span>
+                                <span class="small-text">White index card</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 18px;">✓</span>
+                                <span class="small-text">Petroleum jelly (Vaseline)</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 18px;">✓</span>
+                                <span class="small-text">Clear tape</span>
+                            </div>
+                            <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 18px;">✓</span>
+                                <span class="small-text">String or wire</span>
+                            </div>
+                            <div style="display: flex; align-items: center;">
+                                <span style="color: var(--success-green); margin-right: 8px; font-size: 18px;">✓</span>
+                                <span class="small-text">Small plastic bag</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Steps -->
+                    <h2 class="medium-text" style="font-weight: 700; margin: 24px 0 16px;">Step-by-Step Instructions</h2>
+                    
+                    <!-- Step 1 -->
+                    <div class="info-card">
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 16px; flex-shrink: 0;">1</div>
+                            <div>
+                                <h3 style="font-weight: 700; margin-bottom: 8px;">Prepare the Card</h3>
+                                <p class="small-text" style="color: var(--neutral-gray);">Take a white index card and punch a small hole at the top for hanging. Make sure it's clean and dry.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 2 -->
+                    <div class="info-card">
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 16px; flex-shrink: 0;">2</div>
+                            <div>
+                                <h3 style="font-weight: 700; margin-bottom: 8px;">Apply Petroleum Jelly</h3>
+                                <p class="small-text" style="color: var(--neutral-gray);">Put petroleum jelly in a plastic bag. Rub the bag over the card to create a thin, sticky layer on both sides.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 3 -->
+                    <div class="info-card">
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 16px; flex-shrink: 0;">3</div>
+                            <div>
+                                <h3 style="font-weight: 700; margin-bottom: 8px;">Add String</h3>
+                                <p class="small-text" style="color: var(--neutral-gray);">Thread string through the hole and tie a loop for hanging. Make sure it's secure.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 4 -->
+                    <div class="info-card">
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; background: var(--primary-blue); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 16px; flex-shrink: 0;">4</div>
+                            <div>
+                                <h3 style="font-weight: 700; margin-bottom: 8px;">Hang Outside</h3>
+                                <p class="small-text" style="color: var(--neutral-gray);">Hang 3-5 feet high in an open area. Avoid windy spots or heavy foot traffic.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Step 5 -->
+                    <div class="info-card">
+                        <div style="display: flex; align-items: flex-start;">
+                            <div style="width: 32px; height: 32px; background: var(--success-green); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; margin-right: 16px; flex-shrink: 0;">5</div>
+                            <div>
+                                <h3 style="font-weight: 700; margin-bottom: 8px;">Wait & Collect</h3>
+                                <p class="small-text" style="color: var(--neutral-gray);">Leave for 24 hours, then bring inside and take a photo with this app!</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tips -->
+                    <div class="info-card" style="background: #fef3c7; border-color: var(--warning-orange);">
+                        <h2 class="medium-text" style="font-weight: 700; margin-bottom: 16px; display: flex; align-items: center;">
+                            <span style="font-size: 24px; margin-right: 8px;">💡</span>
+                            Important Tips
+                        </h2>
+                        <div style="space-y: 8px;">
+                            <div style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+                                <span style="color: var(--warning-orange); margin-right: 8px; margin-top: 2px;">•</span>
+                                <span class="small-text">Place in morning for best collection</span>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+                                <span style="color: var(--warning-orange); margin-right: 8px; margin-top: 2px;">•</span>
+                                <span class="small-text">Avoid rainy days - wait for dry weather</span>
+                            </div>
+                            <div style="display: flex; align-items: flex-start; margin-bottom: 8px;">
+                                <span style="color: var(--warning-orange); margin-right: 8px; margin-top: 2px;">•</span>
+                                <span class="small-text">Take photos in good lighting</span>
+                            </div>
+                            <div style="display: flex; align-items: flex-start;">
+                                <span style="color: var(--warning-orange); margin-right: 8px; margin-top: 2px;">•</span>
+                                <span class="small-text">Keep pets away during collection</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Button -->
+                    <div style="margin-top: 24px;">
+                        <button onclick="showCamera()" class="primary-button">
+                            Ready to Take Photo! 📷
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- History Screen -->
+        <div id="history-screen" class="screen">
+            <div style="height: 100vh; overflow-y: auto; padding-bottom: 100px;">
+                
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, var(--neutral-gray) 0%, #334155 100%); color: white; padding: 24px 20px 32px;">
+                    <button onclick="showHome()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px; border-radius: 8px; cursor: pointer; margin-bottom: 16px;">
+                        <svg width="24" height="24" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                        </svg>
+                    </button>
+                    <h1 class="large-text" style="font-weight: 700; margin-bottom: 8px;">My History</h1>
+                    <p style="opacity: 0.9;">Your pollen readings and symptom logs</p>
+                </div>
+
+                <!-- Content -->
+                <div style="padding: 20px;">
+                    
+                    <!-- Recent submission -->
+                    <div class="info-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center;">
+                                <div class="status-indicator" style="background: var(--warning-orange);"></div>
+                                <span style="font-weight: 600;">Medium Level</span>
+                            </div>
+                            <span style="font-size: 14px; color: var(--neutral-gray);">2 hours ago</span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span class="small-text" style="color: var(--text-dark);">23 grains detected • 87% confidence</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--neutral-gray);">
+                            Oak, Birch, and Grass pollen detected
+                        </div>
+                    </div>
+
+                    <!-- Older submission -->
+                    <div class="info-card">
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                            <div style="display: flex; align-items: center;">
+                                <div class="status-indicator" style="background: var(--success-green);"></div>
+                                <span style="font-weight: 600;">Low Level</span>
+                            </div>
+                            <span style="font-size: 14px; color: var(--neutral-gray);">Yesterday</span>
+                        </div>
+                        <div style="margin-bottom: 8px;">
+                            <span class="small-text" style="color: var(--text-dark);">8 grains detected • 92% confidence</span>
+                        </div>
+                        <div style="font-size: 12px; color: var(--neutral-gray);">
+                            Mainly grass pollen
+                        </div>
+                    </div>
+
+                    <!-- Empty state -->
+                    <div style="text-align: center; padding: 40px 20px; color: var(--neutral-gray);">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                        <p class="medium-text" style="margin-bottom: 16px;">Track your readings over time</p>
+                        <p class="small-text" style="margin-bottom: 24px;">Take more photos to see patterns and trends in your area.</p>
+                        <button onclick="showCamera()" class="primary-button">
+                            Take First Photo
+                        </button>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Bottom Navigation -->
+            <div class="bottom-nav">
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 0 12px;">
+                    <div class="nav-item" onclick="showHome()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"></path>
+                        </svg>
+                        <span class="nav-text">Home</span>
+                    </div>
+                    <div class="nav-item" onclick="showCamera()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M4 5a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V7a2 2 0 00-2-2h-1.586l-.707-.707A1 1 0 0013 4h-6a1 1 0 00-.707.293L5.586 5H4zm6 9a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Submit</span>
+                    </div>
+                    <div class="nav-item" onclick="showMap()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Map</span>
+                    </div>
+                    <div class="nav-item active" onclick="showSymptomLog()">
+                        <svg class="nav-icon" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"></path>
+                        </svg>
+                        <span class="nav-text">Log</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Data Point Popup Modal -->
+        <div id="data-popup" class="modal-backdrop">
+            <div class="modal-content">
+                <div style="text-align: center;">
+                    <div id="popup-icon" style="font-size: 48px; margin-bottom: 16px;">🌿</div>
+                    <h3 id="popup-level" class="medium-text" style="font-weight: 700; margin-bottom: 8px;">Medium Level</h3>
+                    <p id="popup-count" style="color: var(--neutral-gray); margin-bottom: 16px;">23 grains detected</p>
+                    <div style="font-size: 14px; color: var(--neutral-gray); margin-bottom: 20px;">
+                        <div>Submitted 2 hours ago</div>
+                        <div>Location: 0.2 miles away</div>
+                    </div>
+                    <button onclick="hideDataPoint()" class="primary-button">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Modal -->
+        <div id="login-modal" class="modal-backdrop">
+            <div class="modal-content">
+                <div style="text-align: center; margin-bottom: 24px;">
+                    <div style="font-size: 48px; margin-bottom: 12px;">🌿</div>
+                    <h3 class="medium-text" style="font-weight: 700; margin-bottom: 8px;">Join CrowdPollen</h3>
+                    <p style="color: var(--neutral-gray); font-size: 14px;">Save your allergy profile and get personalized insights</p>
+                </div>
+                
+                <div style="margin-bottom: 20px;">
+                    <input type="email" placeholder="Email address" class="form-input" style="margin-bottom: 12px;">
+                    <input type="password" placeholder="Password" class="form-input">
+                </div>
+                
+                <div style="margin-bottom: 16px;">
+                    <button onclick="login()" class="primary-button" style="margin-bottom: 8px;">
+                        Sign In
+                    </button>
+                    <button onclick="createAccount()" class="secondary-button">
+                        Create Account
+                    </button>
+                </div>
+                
+                <div style="text-align: center;">
+                    <button onclick="hideLogin()" style="background: none; border: none; color: var(--neutral-gray); font-size: 14px; text-decoration: underline; cursor: pointer;">
+                        Continue without account
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let userLoggedIn = false;
+        let currentScreen = 'home-screen';
+        let resultsLocation = null;
+
+        // Navigation functions
+        function showScreen(screenId) {
+            // Hide all screens
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.remove('active');
+            });
+            
+            // Show target screen
+            const targetScreen = document.getElementById(screenId);
+            if (targetScreen) {
+                targetScreen.classList.add('active');
+                currentScreen = screenId;
+            }
+
+            // Update navigation active state
+            updateNavigation(screenId);
+        }
+
+        function updateNavigation(screenId) {
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+
+            // Map screen names to nav buttons (4 tabs now)
+            const navMapping = {
+                'home-screen': 0,
+                'camera-screen': 1,  // Submit
+                'map-screen': 2,     // Map
+                'symptom-log-screen': 3,  // Log
+                'settings-screen': 3,  // Settings also maps to position 3
+                'history-screen': 3,   // History also maps to position 3
+                'instructions-screen': 0  // Instructions maps to home
+            };
+
+            const navItems = document.querySelectorAll('.nav-item');
+            const activeIndex = navMapping[screenId];
+            if (activeIndex !== undefined && navItems[activeIndex]) {
+                navItems[activeIndex].classList.add('active');
+            }
+        }
+
+        // Screen navigation
+        function showHome() { showScreen('home-screen'); }
+        function showCamera() { showScreen('camera-screen'); }
+        function showMap() { 
+            showScreen('map-screen'); 
+            // Update map display when showing map screen
+            setTimeout(() => {
+                updateMapDisplay();
+            }, 100);
+        }
+        function showSettings() { showScreen('settings-screen'); }
+        function showHistory() { showScreen('history-screen'); }
+        function showInstructions() { showScreen('instructions-screen'); }
+        function showSymptomLog() { showScreen('symptom-log-screen'); }
+
+        function showSymptomLogFromResults() {
+            // If coming from results, reset the symptom form
+            document.getElementById('congestion').value = 0;
+            document.getElementById('eyes').value = 0;
+            document.getElementById('sneezing').value = 0;
+            document.getElementById('took-medication').checked = false;
+            updateSymptom('congestion', 0);
+            updateSymptom('eyes', 0);
+            updateSymptom('sneezing', 0);
+            
+            showSymptomLog();
+        }
+
+        // Camera functionality
+        function capturePhoto() {
+            const flash = document.getElementById('flash-overlay');
+            flash.style.opacity = '1';
+            
+            setTimeout(() => {
+                flash.style.opacity = '0';
+                showProcessing();
+            }, 150);
+        }
+
+        function showProcessing() {
+            showScreen('processing-screen');
+            
+            const progressBar = document.getElementById('progress-bar');
+            const progressText = document.getElementById('progress-text');
+            
+            const steps = [
+                { width: 25, text: 'Uploading image...' },
+                { width: 50, text: 'Analyzing pollen grains...' },
+                { width: 75, text: 'Identifying species...' },
+                { width: 100, text: 'Saving to database...' }
+            ];
+            
+            let currentStep = 0;
+            
+            function updateProgress() {
+                if (currentStep < steps.length) {
+                    const step = steps[currentStep];
+                    progressBar.style.width = step.width + '%';
+                    progressText.textContent = step.text;
+                    currentStep++;
+                    
+                    setTimeout(updateProgress, 1200);
+                } else {
+                    setTimeout(() => {
+                        showResults();
+                    }, 800);
+                }
+            }
+            
+            updateProgress();
+        }
+
+        function showResults() {
+            showScreen('results-screen');
+            
+            // Simulate random results
+            const results = [
+                { level: 'Low', count: 8, icon: '🌱', color: 'var(--success-green)' },
+                { level: 'Medium', count: 23, icon: '🌿', color: 'var(--warning-orange)' },
+                { level: 'High', count: 45, icon: '🌻', color: 'var(--danger-red)' },
+                { level: 'Very High', count: 78, icon: '🌋', color: '#991b1b' }
+            ];
+            
+            const result = results[Math.floor(Math.random() * results.length)];
+            
+            document.getElementById('result-icon').textContent = result.icon;
+            document.getElementById('result-level').textContent = result.level + ' Pollen Level';
+            document.getElementById('result-count').textContent = `${result.count} grains detected with ${85 + Math.floor(Math.random() * 10)}% confidence`;
+            
+            // Update home screen status
+            document.getElementById('today-status').textContent = result.level + ' Pollen Today';
+            document.getElementById('today-status').style.color = result.color;
+            
+            // Show location card if no location is set
+            const locationCard = document.getElementById('results-location-card');
+            const personalAdvice = document.getElementById('personal-advice-card');
+            
+            if (!hasLocationData()) {
+                locationCard.style.display = 'block';
+            } else {
+                locationCard.style.display = 'none';
+            }
+            
+            // Show personal advice for logged in users
+            if (userLoggedIn) {
+                personalAdvice.style.display = 'block';
+            } else {
+                personalAdvice.style.display = 'none';
+            }
+        }
+
+        // Symptom tracking
+        function updateSymptom(symptomType, value) {
+            const labels = ['None', 'Mild', 'Moderate', 'Severe', 'Very Severe'];
+            const valueElement = document.getElementById(symptomType + '-value');
+            if (valueElement) {
+                valueElement.textContent = labels[parseInt(value)] || 'None';
+            }
+        }
+
+        function saveSymptomLog() {
+            // Simulate saving
+            setTimeout(() => {
+                if (userLoggedIn) {
+                    alert('✅ Symptom log saved to your profile!\n\nWe\'ll use this to improve your personal recommendations.');
+                } else {
+                    // For guests, confirm anonymous sharing
+                    if (confirm('Share your symptom data anonymously?\n\nThis helps improve pollen forecasts for everyone in your community. No personal information is collected.')) {
+                        alert('✅ Thank you!\n\nYour anonymous data has been saved and will help improve local pollen forecasts.');
+                    } else {
+                        alert('No problem! Your symptom data was not saved.');
+                    }
+                }
+                showHome();
+            }, 500);
+        }
+
+        // Map functionality
+        function refreshMap() {
+            const button = event.target.closest('button');
+            button.style.transform = 'rotate(360deg)';
+            setTimeout(() => {
+                button.style.transform = 'rotate(0deg)';
+            }, 500);
+        }
+
+        function showDataPoint(level, count) {
+            const popup = document.getElementById('data-popup');
+            const icons = { low: '🌱', medium: '🌿', high: '🌻', very_high: '🌋' };
+            
+            document.getElementById('popup-icon').textContent = icons[level] || '🌿';
+            document.getElementById('popup-level').textContent = level.charAt(0).toUpperCase() + level.slice(1) + ' Level';
+            document.getElementById('popup-count').textContent = `${count} grains detected`;
+            
+            popup.classList.add('active');
+        }
+
+        function hideDataPoint() {
+            document.getElementById('data-popup').classList.remove('active');
+        }
+
+        // Account functionality
+        function showLogin() {
+            document.getElementById('login-modal').classList.add('active');
+        }
+
+        function hideLogin() {
+            document.getElementById('login-modal').classList.remove('active');
+        }
+
+        function login() {
+            userLoggedIn = true;
+            updateUserInterface();
+            hideLogin();
+        }
+
+        function createAccount() {
+            // Simulate account creation
+            login();
+        }
+
+        function logout() {
+            userLoggedIn = false;
+            updateUserInterface();
+        }
+
+        function showPrivacyPolicy() {
+            alert('Privacy Policy:\n\n• Your data is encrypted and secure\n• We never sell personal information\n• Anonymous data helps improve forecasts\n• You can delete your data anytime\n• Guest submissions are completely anonymous\n• Location data is optional');
+        }
+
+        function showTerms() {
+            alert('Terms of Service:\n\n• Use app responsibly\n• Data provided for research purposes\n• Not a substitute for medical advice\n• Community-driven platform\n• By submitting data, you agree to anonymous sharing for research');
+        }
+
+        function toggleLoginState() {
+            userLoggedIn = !userLoggedIn;
+            updateUserInterface();
+        }
+
+        function updateUserInterface() {
+            // Update settings screen
+            const loginSection = document.getElementById('login-section');
+            const accountSection = document.getElementById('account-section');
+            if (loginSection) loginSection.style.display = userLoggedIn ? 'none' : 'block';
+            if (accountSection) accountSection.style.display = userLoggedIn ? 'block' : 'none';
+            
+            // Update symptom log screen
+            const guestHeader = document.getElementById('symptom-header-guest');
+            const userHeader = document.getElementById('symptom-header-user');
+            
+            if (guestHeader) guestHeader.style.display = userLoggedIn ? 'none' : 'block';
+            if (userHeader) userHeader.style.display = userLoggedIn ? 'block' : 'none';
+            
+            const userInsights = document.getElementById('user-insights');
+            if (userInsights) userInsights.style.display = userLoggedIn ? 'block' : 'none';
+            
+            const guestSaveButton = document.getElementById('save-button-guest');
+            const userSaveButton = document.getElementById('save-button-user');
+            if (guestSaveButton) guestSaveButton.style.display = userLoggedIn ? 'none' : 'block';
+            if (userSaveButton) userSaveButton.style.display = userLoggedIn ? 'block' : 'none';
+
+            // Show/hide anonymous data notice for guests
+            const anonymousNotice = document.getElementById('anonymous-data-notice');
+            if (anonymousNotice) anonymousNotice.style.display = userLoggedIn ? 'none' : 'block';
+
+            // Update welcome cards
+            const guestWelcomeCard = document.getElementById('guest-welcome-card');
+            const userWelcomeCard = document.getElementById('user-welcome-card');
+            if (guestWelcomeCard) guestWelcomeCard.style.display = userLoggedIn ? 'none' : 'block';
+            if (userWelcomeCard) userWelcomeCard.style.display = userLoggedIn ? 'block' : 'none';
+
+            // Update toggle button text
+            const toggleButton = document.getElementById('login-toggle');
+            if (toggleButton) {
+                toggleButton.textContent = userLoggedIn ? 'View as Guest' : 'View as Logged In';
+            }
+
+            // Update personalized recommendations
+            const personalizedRecs = document.getElementById('personalized-recommendations');
+            if (personalizedRecs) {
+                personalizedRecs.style.display = userLoggedIn ? 'block' : 'none';
+            }
+
+            // Update map display based on location availability
+            updateMapDisplay();
+        }
+
+        // Check if user has location data
+        function hasLocationData() {
+            const locationDisplay = document.getElementById('location-display');
+            const userLocationDisplay = document.getElementById('user-location-display');
+            
+            if (userLoggedIn) {
+                // For logged in users, they have pre-set location
+                return true;
+            } else {
+                // For guests, check if they've entered a location
+                return locationDisplay && !locationDisplay.textContent.includes('Enter ZIP');
+            }
+        }
+
+        // Update map display based on location availability
+        function updateMapDisplay() {
+            const locationRequired = document.getElementById('location-required-notice');
+            const countrywideMap = document.getElementById('countrywide-map');
+            const localMap = document.getElementById('local-map');
+            const mapTitle = document.getElementById('map-title');
+            
+            // Update home screen pollen status
+            const pollenStatusCard = document.getElementById('pollen-status-card');
+            const usOverviewCard = document.getElementById('us-overview-card');
+            const statusSubtitle = document.getElementById('status-subtitle');
+            
+            if (hasLocationData()) {
+                // Show local map and local pollen data
+                if (locationRequired) locationRequired.style.display = 'none';
+                if (countrywideMap) countrywideMap.style.display = 'none';
+                if (localMap) localMap.style.display = 'block';
+                if (mapTitle) mapTitle.textContent = 'Neighborhood Pollen';
+                
+                // Show local pollen status
+                if (pollenStatusCard) pollenStatusCard.style.display = 'block';
+                if (usOverviewCard) usOverviewCard.style.display = 'none';
+                if (statusSubtitle) statusSubtitle.textContent = 'Last updated 2 hours ago • 47 local reports';
+            } else {
+                // Show countrywide map and US overview
+                if (locationRequired) locationRequired.style.display = 'block';
+                if (countrywideMap) countrywideMap.style.display = 'block';
+                if (localMap) localMap.style.display = 'none';
+                if (mapTitle) mapTitle.textContent = 'US Pollen Levels';
+                
+                // Show US overview instead of local data
+                if (pollenStatusCard) pollenStatusCard.style.display = 'none';
+                if (usOverviewCard) usOverviewCard.style.display = 'block';
+            }
+        }
+
+        // Location and weather functionality
+        let useGPS = false; // Default to ZIP code entry
+
+        function toggleLocationMode() {
+            useGPS = !useGPS;
+            
+            if (useGPS) {
+                // Try to get GPS location
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(
+                        function(position) {
+                            // Success - update with GPS location
+                            updateLocationDisplay();
+                        },
+                        function(error) {
+                            // Failed - revert to ZIP entry
+                            useGPS = false;
+                            promptForZipCode();
+                        }
+                    );
+                } else {
+                    useGPS = false;
+                    promptForZipCode();
+                }
+            } else {
+                // Switch to ZIP code entry
+                promptForZipCode();
+            }
+        }
+
+        function updateLocationDisplay() {
+            // Simulate getting location data
+            setTimeout(() => {
+                const locations = [
+                    { city: 'Portland', state: 'OR', zip: '97201', weather: '72°F, Partly Cloudy, Light breeze' },
+                    { city: 'Seattle', state: 'WA', zip: '98101', weather: '68°F, Overcast, Calm winds' },
+                    { city: 'San Francisco', state: 'CA', zip: '94102', weather: '65°F, Foggy, Moderate breeze' },
+                    { city: 'Denver', state: 'CO', zip: '80202', weather: '75°F, Sunny, Light winds' }
+                ];
+                
+                const location = locations[Math.floor(Math.random() * locations.length)];
+                
+                // Update all location displays
+                const displays = [
+                    { location: 'location-display', weather: 'weather-display' },
+                    { location: 'user-location-display', weather: 'user-weather-display' }
+                ];
+                
+                displays.forEach(display => {
+                    const locationEl = document.getElementById(display.location);
+                    const weatherEl = document.getElementById(display.weather);
+                    
+                    if (locationEl) {
+                        locationEl.textContent = `${location.city}, ${location.state} ${location.zip}`;
+                    }
+                    if (weatherEl) {
+                        weatherEl.textContent = `🌤️ ${location.weather}`;
+                    }
+                });
+                
+                // Update map display after location change
+                updateMapDisplay();
+            }, 800);
+        }
+
+        function promptForZipCode() {
+            const zipCode = prompt('Enter your ZIP code for local pollen info:');
+            if (zipCode && zipCode.length === 5 && /^\d+$/.test(zipCode)) {
+                // Valid ZIP code
+                setTimeout(() => {
+                    const mockLocation = `Your Area ${zipCode}`;
+                    const mockWeather = '🌤️ 70°F, Partly Cloudy, Light breeze';
+                    
+                    // Update all displays
+                    const displays = [
+                        { location: 'location-display', weather: 'weather-display' },
+                        { location: 'user-location-display', weather: 'user-weather-display' }
+                    ];
+                    
+                    displays.forEach(display => {
+                        const locationEl = document.getElementById(display.location);
+                        const weatherEl = document.getElementById(display.weather);
+                        
+                        if (locationEl) locationEl.textContent = mockLocation;
+                        if (weatherEl) weatherEl.textContent = mockWeather;
+                    });
+                    
+                    // Update map display after location change
+                    updateMapDisplay();
+                }, 500);
+            } else if (zipCode !== null) {
+                alert('Please enter a valid 5-digit ZIP code.');
+                promptForZipCode();
+            }
+            // If cancelled, leave as is
+        }
+
+        function promptForResultsLocation() {
+            const zipCode = prompt('Add your ZIP code to help improve local forecasts:');
+            if (zipCode && zipCode.length === 5 && /^\d+$/.test(zipCode)) {
+                // Valid ZIP code
+                resultsLocation = zipCode;
+                
+                // Update location displays
+                const displays = [
+                    { location: 'location-display', weather: 'weather-display' },
+                    { location: 'user-location-display', weather: 'user-weather-display' }
+                ];
+                
+                displays.forEach(display => {
+                    const locationEl = document.getElementById(display.location);
+                    const weatherEl = document.getElementById(display.weather);
+                    
+                    if (locationEl && locationEl.textContent.includes('Enter ZIP')) {
+                        locationEl.textContent = `Your Area ${zipCode}`;
+                    }
+                    if (weatherEl && weatherEl.textContent.includes('Add location')) {
+                        weatherEl.textContent = '🌤️ 70°F, Partly Cloudy, Light breeze';
+                    }
+                });
+                
+                // Hide the location card on results screen
+                const locationCard = document.getElementById('results-location-card');
+                if (locationCard) locationCard.style.display = 'none';
+                
+                // Show success message
+                alert('✅ Location added!\n\nYour pollen reading is now helping improve local forecasts.');
+                
+                // Update map display
+                updateMapDisplay();
+            } else if (zipCode !== null) {
+                alert('Please enter a valid 5-digit ZIP code.');
+                promptForResultsLocation();
+            }
+        }
+
+        // Medication tracking functions
+        function markMedicationTaken() {
+            const reminder = document.getElementById('medication-reminder');
+            if (reminder) {
+                reminder.style.background = 'rgba(22, 163, 74, 0.1)';
+                reminder.style.borderLeft = '4px solid var(--success-green)';
+                reminder.innerHTML = '<p style="font-size: 14px; margin: 0; color: var(--success-green); font-weight: 600;">✓ Medication taken! You\'re all set for today.</p>';
+            }
+            
+            // Hide action buttons
+            setTimeout(() => {
+                const actionDiv = reminder?.nextElementSibling;
+                if (actionDiv) actionDiv.style.display = 'none';
+            }, 100);
+        }
+
+        function snoozeReminder() {
+            const reminder = document.getElementById('medication-reminder');
+            if (reminder) {
+                reminder.style.background = 'rgba(156, 163, 175, 0.1)';
+                reminder.innerHTML = '<p style="font-size: 14px; margin: 0; color: var(--neutral-gray); font-weight: 600;">⏰ We\'ll remind you again in 2 hours.</p>';
+            }
+            
+            // Hide action buttons
+            setTimeout(() => {
+                const actionDiv = reminder?.nextElementSibling;
+                if (actionDiv) actionDiv.style.display = 'none';
+            }, 100);
+        }
+
+        function addMedication() {
+            const medicationName = prompt('Enter medication name:');
+            if (medicationName) {
+                const medicationList = document.getElementById('medication-list');
+                const newMed = document.createElement('div');
+                newMed.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 8px; margin-bottom: 8px;';
+                newMed.innerHTML = `
+                    <div>
+                        <div style="font-weight: 600;">${medicationName}</div>
+                        <div style="font-size: 14px; color: var(--neutral-gray);">As needed</div>
+                    </div>
+                    <button onclick="removeMedication(this)" style="background: none; border: none; color: var(--danger-red); font-size: 14px; cursor: pointer;">Remove</button>
+                `;
+                medicationList.appendChild(newMed);
+            }
+        }
+
+        function removeMedication(button) {
+            button.closest('div').remove();
+        }
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            showHome();
+            updateUserInterface(); // Set initial UI state
+            
+            // Initialize map display
+            setTimeout(() => {
+                updateMapDisplay();
+            }, 500);
+            
+            // Set current date/time
+            const now = new Date();
+            const dateElement = document.getElementById('current-date');
+            const timeElement = document.getElementById('current-time');
+            
+            if (dateElement) {
+                dateElement.textContent = now.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            }
+            
+            if (timeElement) {
+                timeElement.textContent = now.toLocaleTimeString('en-US', { 
+                    hour: 'numeric', 
+                    minute: '2-digit',
+                    hour12: true 
+                });
+            }
+
+            // Close modals on backdrop click
+            document.getElementById('data-popup').addEventListener('click', function(e) {
+                if (e.target === this) hideDataPoint();
+            });
+
+            document.getElementById('login-modal').addEventListener('click', function(e) {
+                if (e.target === this) hideLogin();
+            });
+        });
+
+        // Add spin animation for processing
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from { transform: rotate(0deg); }
+                to { transform: rotate(360deg); }
+            }
+            @keyframes pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0.5; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
