@@ -3,6 +3,8 @@
  * Handles all interactions with Google's Pollen API including forecasts and heatmap tiles
  */
 
+import apiMonitoringService from './apiMonitoringService'
+
 const API_BASE_URL = 'https://pollen.googleapis.com/v1';
 // Use unified Google Maps API key, fallback to separate pollen key
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_POLLEN_API_KEY;
@@ -45,11 +47,33 @@ const makeApiRequest = async (url, options = {}, retries = 3) => {
     ...options
   };
 
+  const startTime = Date.now();
+  let lastError = null;
+
   for (let attempt = 0; attempt < retries; attempt++) {
     try {
-      const response = await fetch(url, requestOptions);
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(url, {
+        ...requestOptions,
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      const responseTime = Date.now() - startTime;
       
       if (!response.ok) {
+        // Record failed API call
+        apiMonitoringService.recordApiCall(
+          'google-pollen',
+          'forecast',
+          false,
+          responseTime,
+          0.001 // $0.001 per request
+        );
+
         if (response.status === 429) {
           // Rate limited - wait and retry
           const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
@@ -68,14 +92,39 @@ const makeApiRequest = async (url, options = {}, retries = 3) => {
         throw new Error(`API request failed: ${response.status} ${response.statusText}`);
       }
 
+      // Record successful API call
+      apiMonitoringService.recordApiCall(
+        'google-pollen',
+        'forecast',
+        true,
+        responseTime,
+        0.001 // $0.001 per request
+      );
+
       return await response.json();
     } catch (error) {
-      if (attempt === retries - 1) {
-        throw error;
+      lastError = error;
+      
+      // Handle timeout specifically
+      if (error.name === 'AbortError') {
+        lastError = new Error('Request timeout - Google Pollen API not responding');
       }
       
-      // Wait before retry
-      const delay = Math.pow(2, attempt) * 1000;
+      if (attempt === retries - 1) {
+        // Record final failed attempt
+        const responseTime = Date.now() - startTime;
+        apiMonitoringService.recordApiCall(
+          'google-pollen',
+          'forecast',
+          false,
+          responseTime,
+          0.001
+        );
+        throw lastError;
+      }
+      
+      // Wait before retry (shorter for timeouts)
+      const delay = error.name === 'AbortError' ? 1000 : Math.pow(2, attempt) * 1000;
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
@@ -123,8 +172,10 @@ export const getForecast = async (latitude, longitude, days = 3, languageCode = 
     url.searchParams.append('languageCode', languageCode);
 
     console.log('Fetching forecast from Google Pollen API:', { latitude, longitude, days });
+    console.log('API URL:', url.toString());
     
     const data = await makeApiRequest(url.toString());
+    console.log('Google Pollen API response received:', data);
     
     // Process and normalize the response
     const processedData = processForecastData(data);
@@ -148,40 +199,55 @@ export const getForecast = async (latitude, longitude, days = 3, languageCode = 
  * Process raw forecast data from Google API into normalized format
  */
 const processForecastData = (rawData) => {
+  console.log('Processing raw Google Pollen data:', rawData);
+  
   if (!rawData || !rawData.dailyInfo) {
+    console.error('Invalid forecast data structure:', rawData);
     throw new Error('Invalid forecast data received');
   }
 
-  return {
+  console.log('Daily info array:', rawData.dailyInfo);
+
+  const processedData = {
     regionCode: rawData.regionCode,
-    dailyForecasts: rawData.dailyInfo.map(day => ({
-      date: day.date,
-      pollenTypes: {
-        tree: {
-          index: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.indexInfo?.value || 0,
-          category: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.indexInfo?.category || 'UNSPECIFIED',
-          displayName: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.displayName || 'Tree Pollen'
+    dailyForecasts: rawData.dailyInfo.map((day, index) => {
+      console.log(`Processing day ${index}:`, day);
+      
+      const processedDay = {
+        date: day.date,
+        pollenTypes: {
+          tree: {
+            index: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.indexInfo?.value || 0,
+            category: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.indexInfo?.category || 'UNSPECIFIED',
+            displayName: day.pollenTypeInfo?.find(p => p.code === 'TREE')?.displayName || 'Tree Pollen'
+          },
+          grass: {
+            index: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.indexInfo?.value || 0,
+            category: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.indexInfo?.category || 'UNSPECIFIED',
+            displayName: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.displayName || 'Grass Pollen'
+          },
+          weed: {
+            index: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.indexInfo?.value || 0,
+            category: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.indexInfo?.category || 'UNSPECIFIED',
+            displayName: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.displayName || 'Weed Pollen'
+          }
         },
-        grass: {
-          index: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.indexInfo?.value || 0,
-          category: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.indexInfo?.category || 'UNSPECIFIED',
-          displayName: day.pollenTypeInfo?.find(p => p.code === 'GRASS')?.displayName || 'Grass Pollen'
-        },
-        weed: {
-          index: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.indexInfo?.value || 0,
-          category: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.indexInfo?.category || 'UNSPECIFIED',
-          displayName: day.pollenTypeInfo?.find(p => p.code === 'WEED')?.displayName || 'Weed Pollen'
-        }
-      },
-      plantInfo: day.plantInfo || [],
-      healthRecommendations: day.healthRecommendations || []
-    })),
+        plantInfo: day.plantInfo || [],
+        healthRecommendations: day.healthRecommendations || []
+      };
+      
+      console.log(`Processed day ${index}:`, processedDay);
+      return processedDay;
+    }),
     metadata: {
       fetchedAt: new Date().toISOString(),
       source: 'google_pollen_api',
       cacheExpiry: new Date(Date.now() + CACHE_DURATION).toISOString()
     }
   };
+  
+  console.log('Final processed data:', processedData);
+  return processedData;
 };
 
 /**
@@ -281,9 +347,13 @@ export const getCacheStats = () => {
 /**
  * Convert Google pollen category to CrowdPollen level
  * @param {string} category - Google category (UNSPECIFIED, VERY_LOW, LOW, MODERATE, HIGH, VERY_HIGH)
+ * @param {number} index - Pollen index value (0-5)
  * @returns {string} CrowdPollen level
  */
-export const convertCategoryToLevel = (category) => {
+export const convertCategoryToLevel = (category, index = 0) => {
+  // Normalize category to uppercase for consistent matching
+  const normalizedCategory = category?.toString().toUpperCase();
+  
   const categoryMap = {
     'UNSPECIFIED': 'unknown',
     'VERY_LOW': 'very_low',
@@ -293,7 +363,16 @@ export const convertCategoryToLevel = (category) => {
     'VERY_HIGH': 'very_high'
   };
   
-  return categoryMap[category] || 'unknown';
+  // If category is UNSPECIFIED but we have an index, use index to determine level
+  if (normalizedCategory === 'UNSPECIFIED' && index > 0) {
+    if (index <= 1) return 'very_low';
+    if (index <= 2) return 'low';
+    if (index <= 3) return 'moderate';
+    if (index <= 4) return 'high';
+    return 'very_high';
+  }
+  
+  return categoryMap[normalizedCategory] || 'unknown';
 };
 
 /**
@@ -312,9 +391,16 @@ export const getOverallPollenLevel = (pollenTypes) => {
     'unknown': 0
   };
   
-  const treeLevel = convertCategoryToLevel(pollenTypes.tree?.category);
-  const grassLevel = convertCategoryToLevel(pollenTypes.grass?.category);
-  const weedLevel = convertCategoryToLevel(pollenTypes.weed?.category);
+  // Pass both category and index to handle UNSPECIFIED categories
+  const treeLevel = convertCategoryToLevel(pollenTypes.tree?.category, pollenTypes.tree?.index);
+  const grassLevel = convertCategoryToLevel(pollenTypes.grass?.category, pollenTypes.grass?.index);
+  const weedLevel = convertCategoryToLevel(pollenTypes.weed?.category, pollenTypes.weed?.index);
+  
+  console.log('Overall pollen level calculation:', {
+    tree: { category: pollenTypes.tree?.category, index: pollenTypes.tree?.index, level: treeLevel },
+    grass: { category: pollenTypes.grass?.category, index: pollenTypes.grass?.index, level: grassLevel },
+    weed: { category: pollenTypes.weed?.category, index: pollenTypes.weed?.index, level: weedLevel }
+  });
   
   // Return the highest level among all pollen types
   const maxValue = Math.max(
@@ -323,7 +409,10 @@ export const getOverallPollenLevel = (pollenTypes) => {
     levelValues[weedLevel] || 0
   );
   
-  return levels[maxValue - 1] || 'unknown';
+  const overallLevel = levels[maxValue - 1] || 'unknown';
+  console.log('Final overall level:', overallLevel, 'from max value:', maxValue);
+  
+  return overallLevel;
 };
 
 /**

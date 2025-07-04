@@ -19,12 +19,20 @@ export function LocationProvider({ children }) {
   const [permissionStatus, setPermissionStatus] = useState('prompt')
   const [watchId, setWatchId] = useState(null)
   const [useGoogleGeolocation, setUseGoogleGeolocation] = useState(false)
+  const [lastApiCall, setLastApiCall] = useState(null)
+  const [apiCallCount, setApiCallCount] = useState(0)
+
+  // Rate limiting constants
+  const MIN_TIME_BETWEEN_CALLS = 5 * 60 * 1000 // 5 minutes
+  const MIN_DISTANCE_FOR_UPDATE = 100 // 100 meters
+  const MAX_CALLS_PER_HOUR = 10
 
   // Check permission status on mount
   useEffect(() => {
     checkPermissionStatus()
     loadSavedLocation()
     loadGeolocationPreference()
+    loadApiCallHistory()
   }, [])
 
   const checkPermissionStatus = async () => {
@@ -70,6 +78,93 @@ export function LocationProvider({ children }) {
     } catch (error) {
       console.warn('Error loading geolocation preference:', error)
     }
+  }
+
+  const loadApiCallHistory = () => {
+    try {
+      const saved = localStorage.getItem('crowdpollen_api_call_history')
+      if (saved) {
+        const history = JSON.parse(saved)
+        const oneHour = 60 * 60 * 1000
+        const recentCalls = history.filter(call => Date.now() - call < oneHour)
+        setApiCallCount(recentCalls.length)
+        setLastApiCall(recentCalls.length > 0 ? Math.max(...recentCalls) : null)
+        
+        // Clean up old calls
+        if (recentCalls.length !== history.length) {
+          localStorage.setItem('crowdpollen_api_call_history', JSON.stringify(recentCalls))
+        }
+      }
+    } catch (error) {
+      console.warn('Error loading API call history:', error)
+    }
+  }
+
+  const recordApiCall = () => {
+    const now = Date.now()
+    setLastApiCall(now)
+    setApiCallCount(prev => prev + 1)
+    
+    try {
+      const saved = localStorage.getItem('crowdpollen_api_call_history')
+      const history = saved ? JSON.parse(saved) : []
+      const oneHour = 60 * 60 * 1000
+      const recentCalls = history.filter(call => now - call < oneHour)
+      recentCalls.push(now)
+      localStorage.setItem('crowdpollen_api_call_history', JSON.stringify(recentCalls))
+    } catch (error) {
+      console.warn('Error saving API call history:', error)
+    }
+  }
+
+  const canMakeApiCall = () => {
+    const now = Date.now()
+    
+    // Check time-based rate limiting
+    if (lastApiCall && (now - lastApiCall) < MIN_TIME_BETWEEN_CALLS) {
+      return {
+        allowed: false,
+        reason: `Please wait ${Math.ceil((MIN_TIME_BETWEEN_CALLS - (now - lastApiCall)) / 1000 / 60)} more minutes before requesting location again.`
+      }
+    }
+    
+    // Check hourly call limit
+    if (apiCallCount >= MAX_CALLS_PER_HOUR) {
+      return {
+        allowed: false,
+        reason: `Maximum ${MAX_CALLS_PER_HOUR} location requests per hour reached. Please try again later.`
+      }
+    }
+    
+    return { allowed: true }
+  }
+
+  const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3 // Earth's radius in meters
+    const φ1 = lat1 * Math.PI/180
+    const φ2 = lat2 * Math.PI/180
+    const Δφ = (lat2-lat1) * Math.PI/180
+    const Δλ = (lon2-lon1) * Math.PI/180
+
+    const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ/2) * Math.sin(Δλ/2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+
+    return R * c // Distance in meters
+  }
+
+  const shouldUpdateLocation = (newLat, newLon) => {
+    if (!location) return true
+    
+    const distance = calculateDistance(
+      location.latitude, 
+      location.longitude, 
+      newLat, 
+      newLon
+    )
+    
+    return distance > MIN_DISTANCE_FOR_UPDATE
   }
 
   const updateGeolocationPreference = useCallback((enabled) => {
@@ -144,45 +239,71 @@ export function LocationProvider({ children }) {
     setError(null)
 
     try {
-      if (!googleMapsService.isConfigured()) {
-        // Fallback to browser geolocation without reverse geocoding
-        const position = await new Promise((resolve, reject) => {
-          if (!navigator.geolocation) {
-            reject(new Error('Geolocation is not supported by your browser'))
-            return
-          }
-
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 15000,
-            maximumAge: 300000,
-            ...options
-          })
-        })
-
-        const { latitude, longitude, accuracy } = position.coords
-        const locationData = {
-          latitude,
-          longitude,
-          accuracy,
-          address: `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`,
-          source: 'gps',
-          timestamp: Date.now()
+      // Get browser GPS location first
+      const position = await new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+          reject(new Error('Geolocation is not supported by your browser'))
+          return
         }
 
-        setLocation(locationData)
-        saveLocation(locationData)
-        setPermissionStatus('granted')
-        return locationData
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 300000,
+          ...options
+        })
+      })
+
+      const { latitude, longitude, accuracy } = position.coords
+
+      // Check if we should update location based on distance
+      if (location && !shouldUpdateLocation(latitude, longitude)) {
+        console.log('Location unchanged, using cached location')
+        setIsLoading(false)
+        return location
       }
 
-      // Use Google Maps service for GPS + reverse geocoding
-      const locationData = await googleMapsService.getCurrentLocation(options)
-      
+      let address = `${latitude.toFixed(4)}, ${longitude.toFixed(4)}`
+      let needsReverseGeocode = googleMapsService.isConfigured()
+
+      // If Google Geolocation is enabled and configured, use it for reverse geocoding
+      if (useGoogleGeolocation && googleGeolocationService.isConfigured() && needsReverseGeocode) {
+        const rateCheck = canMakeApiCall()
+        if (!rateCheck.allowed) {
+          console.warn('Rate limit exceeded:', rateCheck.reason)
+          // Use GPS without reverse geocoding to avoid API calls
+          needsReverseGeocode = false
+        } else {
+          try {
+            recordApiCall()
+            const reverseGeocodedData = await googleMapsService.reverseGeocode(latitude, longitude)
+            address = reverseGeocodedData.address
+          } catch (error) {
+            console.warn('Reverse geocoding failed:', error)
+          }
+        }
+      } else if (needsReverseGeocode) {
+        // Use Google Maps for reverse geocoding (free tier)
+        try {
+          const reverseGeocodedData = await googleMapsService.reverseGeocode(latitude, longitude)
+          address = reverseGeocodedData.address
+        } catch (error) {
+          console.warn('Reverse geocoding failed:', error)
+        }
+      }
+
+      const locationData = {
+        latitude,
+        longitude,
+        accuracy,
+        address,
+        source: 'gps',
+        timestamp: Date.now()
+      }
+
       setLocation(locationData)
       saveLocation(locationData)
       setPermissionStatus('granted')
-
       return locationData
     } catch (err) {
       const errorMessage = getLocationErrorMessage(err)
@@ -196,7 +317,7 @@ export function LocationProvider({ children }) {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [location, useGoogleGeolocation, shouldUpdateLocation, canMakeApiCall, recordApiCall])
 
   const watchPosition = useCallback((options = {}) => {
     if (!navigator.geolocation) {

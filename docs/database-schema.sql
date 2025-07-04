@@ -142,7 +142,8 @@ CREATE INDEX idx_notifications_unread ON notifications(user_id, read) WHERE read
 
 -- Create indexes for Google Pollen forecasts
 CREATE INDEX idx_google_forecasts_location_date ON google_pollen_forecasts 
-  USING GIST (ST_MakePoint(longitude, latitude), forecast_date);
+  USING GIST (ST_MakePoint(longitude, latitude));
+CREATE INDEX idx_google_forecasts_forecast_date ON google_pollen_forecasts (forecast_date);
 CREATE INDEX idx_google_forecasts_expires ON google_pollen_forecasts (expires_at);
 CREATE INDEX idx_google_forecasts_date ON google_pollen_forecasts (forecast_date DESC);
 

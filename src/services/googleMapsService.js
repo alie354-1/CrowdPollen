@@ -3,6 +3,8 @@
  * Handles all Google Maps Platform APIs including Maps, Geocoding, and Places
  */
 
+import apiMonitoringService from './apiMonitoringService'
+
 class GoogleMapsService {
   constructor() {
     this.apiKey = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -49,20 +51,47 @@ class GoogleMapsService {
    * Geocode address or ZIP code to coordinates
    */
   async geocodeAddress(address) {
+    const startTime = Date.now();
+    
     try {
       const response = await fetch(
         `${this.baseUrl}/geocode/json?address=${encodeURIComponent(address)}&key=${this.apiKey}`
       );
       
+      const responseTime = Date.now() - startTime;
+      
       if (!response.ok) {
+        apiMonitoringService.recordApiCall(
+          'google-maps',
+          'geocoding',
+          false,
+          responseTime,
+          0.005
+        );
         throw new Error(`Geocoding failed: ${response.status}`);
       }
 
       const data = await response.json();
       
       if (data.status !== 'OK' || !data.results.length) {
+        apiMonitoringService.recordApiCall(
+          'google-maps',
+          'geocoding',
+          false,
+          responseTime,
+          0.005
+        );
         throw new Error(`No results found for: ${address}`);
       }
+
+      // Record successful API call
+      apiMonitoringService.recordApiCall(
+        'google-maps',
+        'geocoding',
+        true,
+        responseTime,
+        0.005
+      );
 
       const result = data.results[0];
       const location = result.geometry.location;
@@ -85,20 +114,47 @@ class GoogleMapsService {
    * Reverse geocode coordinates to address
    */
   async reverseGeocode(latitude, longitude) {
+    const startTime = Date.now();
+    
     try {
       const response = await fetch(
         `${this.baseUrl}/geocode/json?latlng=${latitude},${longitude}&key=${this.apiKey}`
       );
       
+      const responseTime = Date.now() - startTime;
+      
       if (!response.ok) {
+        apiMonitoringService.recordApiCall(
+          'google-maps',
+          'reverse_geocoding',
+          false,
+          responseTime,
+          0.005
+        );
         throw new Error(`Reverse geocoding failed: ${response.status}`);
       }
 
       const data = await response.json();
       
       if (data.status !== 'OK' || !data.results.length) {
+        apiMonitoringService.recordApiCall(
+          'google-maps',
+          'reverse_geocoding',
+          false,
+          responseTime,
+          0.005
+        );
         throw new Error('No address found for coordinates');
       }
+
+      // Record successful API call
+      apiMonitoringService.recordApiCall(
+        'google-maps',
+        'reverse_geocoding',
+        true,
+        responseTime,
+        0.005
+      );
 
       const result = data.results[0];
       

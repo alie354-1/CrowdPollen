@@ -11,6 +11,11 @@ export default function ForecastWidget() {
   const [error, setError] = useState(null);
   const [selectedDay, setSelectedDay] = useState(0);
 
+  // Debug logging for state changes
+  useEffect(() => {
+    console.log('ForecastWidget: State changed - forecast:', forecast, 'loading:', loading, 'error:', error);
+  }, [forecast, loading, error]);
+
   useEffect(() => {
     loadForecast();
   }, [location]);
@@ -24,17 +29,21 @@ export default function ForecastWidget() {
     try {
       setLoading(true);
       setError(null);
+      console.log('ForecastWidget: Starting forecast load for location:', location);
 
-      // Check if Google Pollen API key is configured
-      const hasGoogleAPI = import.meta.env.VITE_GOOGLE_POLLEN_API_KEY;
+      // Check if Google Pollen API key is configured (unified or separate key)
+      const hasGoogleAPI = import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_POLLEN_API_KEY;
+      console.log('ForecastWidget: Has Google API key:', !!hasGoogleAPI);
       
       if (hasGoogleAPI) {
+        console.log('ForecastWidget: Calling enhanced forecast...');
         // Get enhanced forecast with user data integration
         const enhancedForecast = await dataFusionService.getEnhancedForecast(
           location.latitude,
           location.longitude,
           5
         );
+        console.log('ForecastWidget: Enhanced forecast received:', enhancedForecast);
         setForecast(enhancedForecast);
       } else {
         // Demo mode - show sample forecast data
@@ -45,14 +54,16 @@ export default function ForecastWidget() {
     } catch (err) {
       console.error('Failed to load forecast:', err);
       
-      if (import.meta.env.VITE_GOOGLE_POLLEN_API_KEY) {
+      if (import.meta.env.VITE_GOOGLE_MAPS_API_KEY || import.meta.env.VITE_GOOGLE_POLLEN_API_KEY) {
         // Try fallback to Google-only forecast
         try {
+          console.log('ForecastWidget: Trying fallback to Google-only forecast...');
           const googleForecast = await googlePollenService.getForecast(
             location.latitude,
             location.longitude,
             5
           );
+          console.log('ForecastWidget: Fallback forecast received:', googleForecast);
           setForecast(googleForecast);
           setError(null);
         } catch (fallbackErr) {
@@ -69,21 +80,25 @@ export default function ForecastWidget() {
         setError(null); // Don't show error for demo mode
       }
     } finally {
+      console.log('ForecastWidget: Setting loading to false');
       setLoading(false);
     }
   };
 
   // Generate demo forecast data for testing
   const generateDemoForecast = (location) => {
-    const today = new Date();
     const dailyForecasts = [];
     
     const pollenLevels = ['low', 'moderate', 'high', 'moderate', 'low'];
     const pollenTypes = ['tree', 'grass', 'weed'];
     
     for (let i = 0; i < 5; i++) {
-      const date = new Date(today);
-      date.setDate(date.getDate() + i);
+      // Create date properly to avoid timezone issues
+      const today = new Date();
+      const year = today.getFullYear();
+      const month = today.getMonth();
+      const day = today.getDate();
+      const date = new Date(year, month, day + i);
       
       const level = pollenLevels[i];
       const pollenTypeData = {};
@@ -100,8 +115,11 @@ export default function ForecastWidget() {
         };
       });
       
+      // Format date as YYYY-MM-DD in local timezone
+      const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      
       dailyForecasts.push({
-        date: date.toISOString().split('T')[0],
+        date: dateString,
         pollenTypes: pollenTypeData,
         confidence: 0.85 + Math.random() * 0.1, // 85-95% confidence
         dataSource: 'demo',
@@ -141,13 +159,13 @@ export default function ForecastWidget() {
         advice: 'Great conditions for outdoor activities'
       },
       moderate: {
-        color: '#FF9500',
+        color: '#FFCC00',
         emoji: '🟡',
         description: 'Moderate',
         advice: 'Good day for most activities'
       },
       high: {
-        color: '#FF3B30',
+        color: '#FF9500',
         emoji: '🟠',
         description: 'High',
         advice: 'Consider limiting outdoor time'
@@ -159,24 +177,94 @@ export default function ForecastWidget() {
         advice: 'Stay indoors if possible'
       },
       unknown: {
-        color: '#8E8E93',
+        color: '#E5E5E7',
         emoji: '⚪',
-        description: 'Unknown',
-        advice: 'No data available'
+        description: 'Out of Season',
+        advice: 'Not currently active'
       }
     };
     return levels[level] || levels.unknown;
   };
 
-  const formatDate = (dateString, isShort = false) => {
-    const date = new Date(dateString);
+  const getSeasonalContext = () => {
+    const month = new Date().getMonth();
+    
+    // Spring (March-May): Tree pollen season
+    if (month >= 2 && month <= 4) {
+      return {
+        season: 'Spring',
+        primary: 'Tree',
+        description: 'Peak tree pollen season. Oak, birch, and maple are most active.',
+        icon: '🌸'
+      };
+    }
+    // Summer (June-August): Grass pollen season
+    else if (month >= 5 && month <= 7) {
+      return {
+        season: 'Summer',
+        primary: 'Grass',
+        description: 'Peak grass pollen season. Timothy, bermuda, and ryegrass are most active.',
+        icon: '🌾'
+      };
+    }
+    // Fall (September-November): Weed pollen season
+    else if (month >= 8 && month <= 10) {
+      return {
+        season: 'Fall',
+        primary: 'Weed',
+        description: 'Peak weed pollen season. Ragweed and other weeds are most active.',
+        icon: '🍂'
+      };
+    }
+    // Winter (December-February): Low pollen season
+    else {
+      return {
+        season: 'Winter',
+        primary: 'None',
+        description: 'Low pollen season. Most plants are dormant.',
+        icon: '❄️'
+      };
+    }
+  };
+
+  const formatDate = (dateInput, isShort = false) => {
+    let date;
+    
+    // Handle different date formats
+    if (typeof dateInput === 'string') {
+      // Handle YYYY-MM-DD format
+      date = new Date(dateInput + 'T00:00:00');
+    } else if (typeof dateInput === 'object' && dateInput.year && dateInput.month && dateInput.day) {
+      // Handle Google API format: {year: 2025, month: 7, day: 3}
+      // Note: JavaScript months are 0-indexed, but Google API months are 1-indexed
+      date = new Date(dateInput.year, dateInput.month - 1, dateInput.day);
+    } else if (dateInput instanceof Date) {
+      // Handle Date objects
+      date = new Date(dateInput);
+    } else {
+      console.error('Invalid date format:', dateInput);
+      return 'Invalid Date';
+    }
+    
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.error('Invalid date:', dateInput);
+      return 'Invalid Date';
+    }
+    
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
     
-    if (date.toDateString() === today.toDateString()) {
+    // Compare dates properly
+    const dateOnly = new Date(date);
+    dateOnly.setHours(0, 0, 0, 0);
+    
+    if (dateOnly.getTime() === today.getTime()) {
       return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
+    } else if (dateOnly.getTime() === tomorrow.getTime()) {
       return 'Tomorrow';
     } else {
       return isShort 
@@ -186,6 +274,7 @@ export default function ForecastWidget() {
   };
 
   if (!location?.latitude || !location?.longitude) {
+    console.log('ForecastWidget: Rendering location required UI');
     return (
       <div className="bg-white rounded-xl p-6">
         <div className="text-center py-8">
@@ -198,6 +287,7 @@ export default function ForecastWidget() {
   }
 
   if (loading) {
+    console.log('ForecastWidget: Rendering loading UI');
     return (
       <div className="bg-white rounded-xl p-6">
         <div className="animate-pulse">
@@ -215,6 +305,7 @@ export default function ForecastWidget() {
   }
 
   if (error) {
+    console.log('ForecastWidget: Rendering error UI with error:', error);
     return (
       <div className="bg-white rounded-xl p-6">
         <div className="text-center py-8">
@@ -233,6 +324,7 @@ export default function ForecastWidget() {
   }
 
   if (!forecast?.dailyForecasts?.length) {
+    console.log('ForecastWidget: Rendering no data UI - forecast:', forecast);
     return (
       <div className="bg-white rounded-xl p-6">
         <div className="text-center py-8">
@@ -244,8 +336,23 @@ export default function ForecastWidget() {
   }
 
   const selectedForecast = forecast.dailyForecasts[selectedDay];
+  const seasonalContext = getSeasonalContext();
+  
+  // Debug the pollen types structure
+  console.log('ForecastWidget: Selected forecast pollen types:', selectedForecast.pollenTypes);
+  console.log('ForecastWidget: Tree pollen data:', selectedForecast.pollenTypes.tree);
+  console.log('ForecastWidget: Grass pollen data:', selectedForecast.pollenTypes.grass);
+  console.log('ForecastWidget: Weed pollen data:', selectedForecast.pollenTypes.weed);
+  
   const overallLevel = googlePollenService.getOverallPollenLevel(selectedForecast.pollenTypes);
   const levelInfo = getPollenLevelInfo(overallLevel);
+
+  console.log('ForecastWidget: Rendering main forecast UI with data:', {
+    selectedForecast,
+    overallLevel,
+    levelInfo,
+    dailyForecastsLength: forecast.dailyForecasts.length
+  });
 
   return (
     <div className="bg-white rounded-xl p-6">
@@ -255,6 +362,22 @@ export default function ForecastWidget() {
         <p className="text-sm text-gray-600">
           {location.address?.split(',')[0] || 'Your location'}
         </p>
+      </div>
+
+      {/* Seasonal Context Banner */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="flex items-center mb-2">
+          <span className="text-lg mr-2">{seasonalContext.icon}</span>
+          <h3 className="text-sm font-semibold text-blue-900">
+            {seasonalContext.season} Pollen Season
+          </h3>
+        </div>
+        <p className="text-sm text-blue-800">{seasonalContext.description}</p>
+        {seasonalContext.primary !== 'None' && (
+          <p className="text-xs text-blue-600 mt-1">
+            Other pollen types may show as "Out of Season" during this time.
+          </p>
+        )}
       </div>
 
       {/* Current Day Hero */}
@@ -275,17 +398,40 @@ export default function ForecastWidget() {
         {/* Pollen Type Breakdown */}
         <div className="grid grid-cols-3 gap-4 mb-4">
           {Object.entries(selectedForecast.pollenTypes).map(([type, data]) => {
-            const typeLevel = googlePollenService.convertCategoryToLevel(data.category);
+            const typeLevel = googlePollenService.convertCategoryToLevel(data.category, data.index);
             const typeInfo = getPollenLevelInfo(typeLevel);
+            const isActive = typeLevel !== 'unknown';
+            const isPrimary = seasonalContext.primary.toLowerCase() === type;
             
             return (
-              <div key={type} className="text-center">
-                <div className="text-sm font-medium text-gray-900 mb-1 capitalize">{type}</div>
+              <div 
+                key={type} 
+                className={`text-center p-3 rounded-lg border ${
+                  isPrimary 
+                    ? 'border-blue-200 bg-blue-50' 
+                    : isActive 
+                      ? 'border-green-200 bg-green-50' 
+                      : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="text-sm font-medium text-gray-900 mb-2 capitalize flex items-center justify-center">
+                  {type}
+                  {isPrimary && <span className="ml-1 text-xs">🌟</span>}
+                </div>
                 <div 
-                  className="w-4 h-4 rounded-full mx-auto mb-1"
+                  className="w-6 h-6 rounded-full mx-auto mb-2 border-2 border-white shadow-sm"
                   style={{ backgroundColor: typeInfo.color }}
                 ></div>
-                <div className="text-xs text-gray-600">{typeInfo.description}</div>
+                <div className={`text-xs font-medium ${
+                  isActive ? 'text-gray-700' : 'text-gray-500'
+                }`}>
+                  {typeInfo.description}
+                </div>
+                {data.index > 0 && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    Index: {data.index}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -307,7 +453,12 @@ export default function ForecastWidget() {
 
       {/* 5-Day Overview */}
       <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">5-Day Forecast</h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-medium text-gray-900">5-Day Forecast</h4>
+          <div className="text-xs text-green-600 bg-green-50 px-2 py-1 rounded">
+            National Data
+          </div>
+        </div>
         <div className="grid grid-cols-5 gap-2">
           {forecast.dailyForecasts.map((day, index) => {
             const dayLevel = googlePollenService.getOverallPollenLevel(day.pollenTypes);

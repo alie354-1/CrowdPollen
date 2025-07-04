@@ -1,12 +1,16 @@
 import { useState } from 'react'
-import { ArrowLeft, Camera as CameraIcon, MapPin, Clock } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowLeft, Camera as CameraIcon, MapPin, Clock, HelpCircle, X } from 'lucide-react'
 import Camera from '../components/Camera'
 import LocationInput from '../components/LocationInput'
+import ProcessingScreen from '../components/ProcessingScreen'
+import ResultsScreen from '../components/ResultsScreen'
 import { useLocation } from '../contexts/LocationContext'
 import { useAuth } from '../contexts/AuthContext'
 import { crowdPollenAPI } from '../services/crowdPollenAPI'
 
-export default function CameraScreen({ setScreen }) {
+export default function CameraScreen() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { location } = useLocation()
   const [showCamera, setShowCamera] = useState(false)
@@ -14,6 +18,7 @@ export default function CameraScreen({ setScreen }) {
   const [isProcessing, setIsProcessing] = useState(false)
   const [results, setResults] = useState(null)
   const [capturedImage, setCapturedImage] = useState(null)
+  const [showTrapInstructions, setShowTrapInstructions] = useState(false)
 
   const handleCapture = async (blob) => {
     try {
@@ -142,191 +147,22 @@ export default function CameraScreen({ setScreen }) {
 
   // Show processing state
   if (isProcessing) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="text-center max-w-sm">
-          {capturedImage && (
-            <div className="mb-6">
-              <img 
-                src={capturedImage} 
-                alt="Captured pollen trap" 
-                className="w-48 h-48 object-cover rounded-xl mx-auto shadow-lg"
-              />
-            </div>
-          )}
-          
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4" />
-          
-          <h3 className="text-lg font-semibold mb-2">Analyzing Pollen Levels</h3>
-          <p className="text-gray-600 text-sm mb-4">
-            Our AI is counting pollen grains and identifying species...
-          </p>
-          
-          <div className="bg-blue-50 rounded-lg p-3">
-            <p className="text-blue-800 text-xs">
-              This usually takes 10-30 seconds
-            </p>
-          </div>
-        </div>
-      </div>
-    )
+    return <ProcessingScreen capturedImage={capturedImage} />
   }
 
   // Show results
   if (results) {
-    const levelInfo = getPollenLevelInfo(results.pollen_density)
-    
     return (
-      <div className="min-h-screen bg-gray-50 pb-20">
-        {/* Header */}
-        <div className="bg-white shadow-sm p-4 safe-area-top">
-          <div className="flex items-center">
-            <button
-              onClick={() => setScreen('home')}
-              className="mr-3 p-2 hover:bg-gray-100 rounded-lg"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h1 className="text-xl font-semibold">Pollen Analysis Results</h1>
-          </div>
-        </div>
-
-        <div className="p-4 space-y-4">
-          {/* Image Preview */}
-          {capturedImage && (
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <img 
-                src={capturedImage} 
-                alt="Analyzed pollen trap" 
-                className="w-full h-48 object-cover rounded-lg"
-              />
-            </div>
-          )}
-
-          {/* Main Results */}
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center">
-                <span className="text-2xl mr-3">{levelInfo.emoji}</span>
-                <div>
-                  <h2 className="text-xl font-semibold capitalize">
-                    {results.pollen_density.replace('_', ' ')} Level
-                  </h2>
-                  <p className="text-gray-600">
-                    {results.pollen_count} grains detected
-                  </p>
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm text-gray-500">Confidence</div>
-                <div className="text-lg font-semibold">
-                  {Math.round(results.confidence_score * 100)}%
-                </div>
-              </div>
-            </div>
-
-            <div className={`p-4 rounded-lg ${levelInfo.bg}`}>
-              <p className={`text-sm ${levelInfo.color} font-medium`}>
-                {results.advice}
-              </p>
-            </div>
-          </div>
-
-          {/* Species Breakdown */}
-          {results.plant_species && results.plant_species.length > 0 && (
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <h3 className="font-semibold mb-3">Detected Species</h3>
-              <div className="space-y-2">
-                {results.plant_species.map((species, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm">{species}</span>
-                    <div className="w-16 bg-gray-200 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full" 
-                        style={{ width: `${Math.random() * 60 + 20}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Weather Context */}
-          {results.weather_conditions && (
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <h3 className="font-semibold mb-3 flex items-center">
-                <Clock className="w-4 h-4 mr-2" />
-                Weather Conditions
-              </h3>
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div>
-                  <div className="text-lg font-semibold">
-                    {results.weather_conditions.temperature}°C
-                  </div>
-                  <div className="text-xs text-gray-500">Temperature</div>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold">
-                    {results.weather_conditions.humidity}%
-                  </div>
-                  <div className="text-xs text-gray-500">Humidity</div>
-                </div>
-                <div>
-                  <div className="text-lg font-semibold">
-                    {results.weather_conditions.wind_speed} km/h
-                  </div>
-                  <div className="text-xs text-gray-500">Wind</div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Location Info */}
-          {location && (
-            <div className="bg-white rounded-xl shadow-md p-4">
-              <div className="flex items-center">
-                <MapPin className="w-4 h-4 text-gray-400 mr-2" />
-                <span className="text-sm text-gray-600">
-                  {location.address || `${location.latitude?.toFixed(4)}, ${location.longitude?.toFixed(4)}`}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() => setScreen('map')}
-              className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium"
-            >
-              View on Map
-            </button>
-            
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setScreen('symptomLog')}
-                className="py-3 bg-gray-200 text-gray-800 rounded-xl font-medium"
-              >
-                Log Symptoms
-              </button>
-              <button
-                onClick={handleRetake}
-                className="py-3 border border-gray-300 text-gray-700 rounded-xl font-medium"
-              >
-                Retake Photo
-              </button>
-            </div>
-            
-            <button
-              onClick={handleNewSubmission}
-              className="w-full py-2 text-gray-600 text-sm"
-            >
-              Submit Another Reading
-            </button>
-          </div>
-        </div>
-      </div>
+      <ResultsScreen
+        results={results}
+        capturedImage={capturedImage}
+        location={location}
+        onBack={() => navigate('/')}
+        onRetake={handleRetake}
+        onViewMap={() => navigate('/map')}
+        onLogSymptoms={() => navigate('/symptoms')}
+        onNewSubmission={handleNewSubmission}
+      />
     )
   }
 
@@ -337,7 +173,7 @@ export default function CameraScreen({ setScreen }) {
       <div className="bg-white shadow-sm p-4 safe-area-top">
         <div className="flex items-center">
           <button
-            onClick={() => setScreen('home')}
+            onClick={() => navigate('/')}
             className="mr-3 p-2 hover:bg-gray-100 rounded-lg"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -384,6 +220,25 @@ export default function CameraScreen({ setScreen }) {
             </div>
           </div>
         )}
+
+        {/* Pollen Trap Instructions Link */}
+        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <HelpCircle className="w-5 h-5 text-blue-600 mr-2" />
+              <div>
+                <p className="text-sm font-medium text-blue-800">Need a pollen trap?</p>
+                <p className="text-xs text-blue-700">Learn how to make one in 5 minutes</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowTrapInstructions(true)}
+              className="text-sm text-blue-600 underline font-medium"
+            >
+              View Guide
+            </button>
+          </div>
+        </div>
 
         {/* Instructions */}
         <div className="bg-white rounded-xl shadow-md p-6">
@@ -467,6 +322,138 @@ export default function CameraScreen({ setScreen }) {
           <p className="text-center text-sm text-gray-500">
             Please set your location first
           </p>
+        )}
+
+        {/* Pollen Trap Instructions Modal */}
+        {showTrapInstructions && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                <h3 className="text-lg font-semibold">Make a Pollen Trap</h3>
+                <button
+                  onClick={() => setShowTrapInstructions(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 space-y-4">
+                {/* Quick Info */}
+                <div className="bg-blue-50 rounded-lg p-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-medium text-blue-800">⏱️ Time needed:</span>
+                    <span className="text-blue-700">5 minutes</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1">
+                    <span className="font-medium text-blue-800">🕐 Best exposure:</span>
+                    <span className="text-blue-700">1-3 hours (up to 24h)</span>
+                  </div>
+                </div>
+
+                {/* Materials */}
+                <div>
+                  <h4 className="font-semibold mb-2">What you'll need:</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                      <span className="text-sm">Clear tape or petroleum jelly</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                      <span className="text-sm">Small plate or piece of cardboard</span>
+                    </div>
+                    <div className="flex items-center">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                      <span className="text-sm">Magnifying glass (optional)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Steps */}
+                <div>
+                  <h4 className="font-semibold mb-3">Instructions:</h4>
+                  <div className="space-y-4">
+                    <div className="flex items-start">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span className="text-sm font-semibold text-blue-600">1</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Prepare the surface</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Apply clear tape sticky-side up to a small plate, or spread a thin layer of petroleum jelly on the surface.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span className="text-sm font-semibold text-blue-600">2</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Place outside</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Put your trap in an open area away from buildings. Avoid windy spots that might blow the trap away.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span className="text-sm font-semibold text-blue-600">3</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Wait for pollen</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Leave for 1-3 hours for quick results, or up to 24 hours for maximum collection. Best results on dry, breezy days.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3 mt-0.5 flex-shrink-0">
+                        <span className="text-sm font-semibold text-blue-600">4</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">Take a photo</p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          Bring your trap inside and use this app to photograph the collected pollen. Look for small yellow/brown dots.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Tips */}
+                <div className="bg-yellow-50 rounded-lg p-3">
+                  <h5 className="font-medium text-yellow-800 mb-2">💡 Pro Tips:</h5>
+                  <div className="space-y-1 text-xs text-yellow-700">
+                    <p>• Best time: Mid-morning on dry, breezy days</p>
+                    <p>• Avoid rainy or very humid conditions</p>
+                    <p>• Place multiple traps for better coverage</p>
+                    <p>• Use a magnifying glass to see pollen better</p>
+                  </div>
+                </div>
+
+                {/* Reminder */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-800">
+                    <span className="font-medium">Remember:</span> This guide is always available on the submit page whenever you need it!
+                  </p>
+                </div>
+
+                {/* Close Button */}
+                <button
+                  onClick={() => setShowTrapInstructions(false)}
+                  className="w-full py-3 bg-blue-600 text-white rounded-xl font-medium"
+                >
+                  Got it!
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>

@@ -10,7 +10,7 @@ export default function Navigation() {
     { id: 'camera', path: '/camera', icon: Camera, label: 'Submit' },
     { id: 'map', path: '/map', icon: Map, label: 'Map' },
     { id: 'symptomLog', path: '/symptoms', icon: FileText, label: 'Log' },
-    { id: 'settings', path: '/settings', icon: Settings, label: 'Settings' }
+    // { id: 'settings', path: '/settings', icon: Settings, label: 'Settings' }
   ]
 
   const isActive = (path) => {
@@ -23,7 +23,7 @@ export default function Navigation() {
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-100 z-50 safe-area-bottom">
       <div className="max-w-mobile mx-auto">
-        <div className="grid grid-cols-5 px-4 py-2">
+        <div className="grid grid-cols-4 gap-4 px-6 py-2">
           {tabs.map((tab) => (
             <button
               key={tab.id}

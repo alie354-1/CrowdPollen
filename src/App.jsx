@@ -10,6 +10,8 @@ import MapScreen from './screens/MapScreen'
 import SymptomLogScreen from './screens/SymptomLogScreen'
 import HistoryScreen from './screens/HistoryScreen'
 import SettingsScreen from './screens/SettingsScreen'
+import ApiSettingsScreen from './screens/ApiSettingsScreen'
+import WalkthroughScreen from './screens/WalkthroughScreen'
 import OnboardingScreen from './screens/OnboardingScreen'
 import LoadingScreen from './components/LoadingScreen'
 import ErrorBoundary from './components/ErrorBoundary'
@@ -60,6 +62,8 @@ function App() {
                     <Route path="/symptoms" element={<SymptomLogScreen />} />
                     <Route path="/history" element={<HistoryScreen />} />
                     <Route path="/settings" element={<SettingsScreen />} />
+                    <Route path="/api-settings" element={<ApiSettingsScreen />} />
+                    <Route path="/walkthrough" element={<WalkthroughScreen />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                 </main>

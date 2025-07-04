@@ -175,11 +175,15 @@ export const createCombinedForecast = (googleData, userSubmissions = [], options
  */
 export const getEnhancedForecast = async (latitude, longitude, days = 3) => {
   try {
+    console.log('Data fusion: Starting enhanced forecast for:', { latitude, longitude, days });
+    
     // Fetch Google forecast
     const googleForecast = await googlePollenService.getForecast(latitude, longitude, days);
+    console.log('Data fusion: Google forecast received:', googleForecast);
     
     // Fetch recent user submissions for the area
     const userSubmissions = await crowdPollenAPI.getLocalPollenData(latitude, longitude, 10); // 10km radius
+    console.log('Data fusion: User submissions received:', userSubmissions);
     
     // Create combined forecasts for each day
     const enhancedForecasts = googleForecast.dailyForecasts.map(dayForecast => {
@@ -199,7 +203,7 @@ export const getEnhancedForecast = async (latitude, longitude, days = 3) => {
       };
     });
 
-    return {
+    const finalResult = {
       ...googleForecast,
       dailyForecasts: enhancedForecasts,
       metadata: {
@@ -208,6 +212,9 @@ export const getEnhancedForecast = async (latitude, longitude, days = 3) => {
         fusionAlgorithm: 'weighted_average_v1'
       }
     };
+    
+    console.log('Data fusion: Final enhanced forecast:', finalResult);
+    return finalResult;
 
   } catch (error) {
     console.error('Error creating enhanced forecast:', error);

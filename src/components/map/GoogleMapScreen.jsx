@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, MapPin, Layers, RefreshCw, Filter, Navigation } from 'lucide-react'
 import { useLocation } from '../../contexts/LocationContext'
 import { crowdPollenAPI } from '../../services/crowdPollenAPI'
-import { googlePollenService } from '../../services/googlePollenService'
+import googlePollenService from '../../services/googlePollenService'
 import googleMapsService from '../../services/googleMapsService'
 
 export default function GoogleMapScreen() {
@@ -17,7 +17,8 @@ export default function GoogleMapScreen() {
   const [error, setError] = useState(null)
   const [mapData, setMapData] = useState([])
   const [forecastData, setForecastData] = useState(null)
-  const [viewMode, setViewMode] = useState('hybrid') // 'crowd', 'forecast', 'hybrid'
+  // Unified view mode - always show both forecast and community data
+  const [viewMode] = useState('hybrid')
   const [selectedSubmission, setSelectedSubmission] = useState(null)
   const [showLegend, setShowLegend] = useState(true)
 
@@ -103,7 +104,7 @@ export default function GoogleMapScreen() {
             crowdPollenAPI.getLocalSubmissions(
               location.latitude,
               location.longitude,
-              20 // 20km radius
+              16 // 10 mile radius
             )
           )
         } else {
@@ -117,6 +118,8 @@ export default function GoogleMapScreen() {
           promises.push(
             googlePollenService.getForecast(location.latitude, location.longitude)
           )
+        } else {
+          promises.push(Promise.resolve(null))
         }
       }
 
@@ -389,39 +392,7 @@ export default function GoogleMapScreen() {
           </div>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex bg-gray-100 rounded-xl p-1">
-          <button
-            onClick={() => setViewMode('crowd')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === 'crowd'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600'
-            }`}
-          >
-            Community
-          </button>
-          <button
-            onClick={() => setViewMode('forecast')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === 'forecast'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600'
-            }`}
-          >
-            Forecast
-          </button>
-          <button
-            onClick={() => setViewMode('hybrid')}
-            className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-colors ${
-              viewMode === 'hybrid'
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600'
-            }`}
-          >
-            Both
-          </button>
-        </div>
+        {/* View Mode Toggle Removed - unified view */}
       </div>
 
       {/* Map Container */}
@@ -491,16 +462,23 @@ export default function GoogleMapScreen() {
 
         {/* Stats */}
         {!loading && !error && (
-          <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-3">
-            <div className="text-center">
-              <div className="text-lg font-semibold">{mapData.length}</div>
-              <div className="text-xs text-gray-500">Reports</div>
+          <>
+            <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-3">
+              <div className="text-center">
+                <div className="text-lg font-semibold">{mapData.length}</div>
+                <div className="text-xs text-gray-500">Reports</div>
+              </div>
             </div>
-          </div>
+            <div className="absolute top-4 left-4 bg-white rounded-xl shadow-lg p-3">
+              <div className="text-sm font-medium text-gray-700 mb-2">Map Layers</div>
+              <ul className="space-y-1 text-xs text-gray-600">
+                <li>• Community Reports (colored circles)</li>
+                <li>• Forecast Overlay (orange arrow)</li>
+              </ul>
+            </div>
+          </>
         )}
-      </div>
-
-      {/* Submission Detail Modal */}
+    </div>
       {selectedSubmission && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
           <div className="bg-white rounded-2xl p-6 max-w-sm w-full">

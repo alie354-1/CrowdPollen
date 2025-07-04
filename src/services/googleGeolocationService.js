@@ -3,6 +3,8 @@
  * Provides location data using WiFi, cell towers, and IP address
  */
 
+import apiMonitoringService from './apiMonitoringService'
+
 const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 const GEOLOCATION_API_URL = 'https://www.googleapis.com/geolocation/v1/geolocate';
 
@@ -15,6 +17,8 @@ export const getCurrentLocation = async () => {
   if (!API_KEY) {
     throw new Error('Google Maps API key not configured');
   }
+
+  const startTime = Date.now();
 
   try {
     const response = await fetch(`${GEOLOCATION_API_URL}?key=${API_KEY}`, {
@@ -30,7 +34,18 @@ export const getCurrentLocation = async () => {
       })
     });
 
+    const responseTime = Date.now() - startTime;
+
     if (!response.ok) {
+      // Record failed API call
+      apiMonitoringService.recordApiCall(
+        'google-geolocation',
+        'location',
+        false,
+        responseTime,
+        0.005 // $5 per 1,000 requests
+      );
+
       if (response.status === 403) {
         throw new Error('Google Geolocation API access denied. Check your API key and billing.');
       }
@@ -43,8 +58,25 @@ export const getCurrentLocation = async () => {
     const data = await response.json();
     
     if (!data.location) {
+      // Record failed API call
+      apiMonitoringService.recordApiCall(
+        'google-geolocation',
+        'location',
+        false,
+        responseTime,
+        0.005
+      );
       throw new Error('No location data received');
     }
+
+    // Record successful API call
+    apiMonitoringService.recordApiCall(
+      'google-geolocation',
+      'location',
+      true,
+      responseTime,
+      0.005
+    );
 
     return {
       latitude: data.location.lat,

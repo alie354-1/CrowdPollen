@@ -5,8 +5,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { testAllServices, getSetupInstructions, generateEnvTemplate } from '../services/apiTestService';
+import { useLocation } from '../contexts/LocationContext';
 
 const ApiTestPanel = () => {
+  const { useGoogleGeolocation, updateGeolocationPreference, isGoogleGeolocationConfigured } = useLocation();
   const [testResults, setTestResults] = useState(null);
   const [loading, setLoading] = useState(false);
   const [setupInstructions, setSetupInstructions] = useState(null);
@@ -114,6 +116,28 @@ const ApiTestPanel = () => {
               </pre>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Admin Controls */}
+      {isGoogleGeolocationConfigured && (
+        <div className="mb-6 p-4 bg-orange-50 rounded-lg border border-orange-200">
+          <h3 className="text-lg font-semibold text-orange-900 mb-3">🔧 Admin Controls</h3>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-orange-800">Google Geolocation Service</h4>
+              <p className="text-sm text-orange-700">Enable location without GPS ($5 per 1,000 requests)</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={useGoogleGeolocation}
+                onChange={(e) => updateGeolocationPreference(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+            </label>
+          </div>
         </div>
       )}
 

@@ -19,7 +19,6 @@ import {
 import { useAuth } from '../contexts/AuthContext'
 import { useLocation } from '../contexts/LocationContext'
 import { useNotification } from '../contexts/NotificationContext'
-import ApiTestPanel from '../components/ApiTestPanel'
 import LocationInput from '../components/LocationInput'
 
 export default function SettingsScreen() {
@@ -28,7 +27,6 @@ export default function SettingsScreen() {
   const { location, clearLocation, useGoogleGeolocation, updateGeolocationPreference, isGoogleGeolocationConfigured } = useLocation()
   const { preferences, updatePreferences } = useNotification()
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [showApiTest, setShowApiTest] = useState(false)
   const [showLocationInput, setShowLocationInput] = useState(false)
   const [darkMode, setDarkMode] = useState(false)
 
@@ -206,18 +204,56 @@ export default function SettingsScreen() {
                 <div>
                   <h3 className="font-medium text-gray-900">Sign In</h3>
                   <p className="text-sm text-gray-500">
-                    Sync data across devices
+                    Coming soon - Sync data across devices
                   </p>
                 </div>
                 <button
-                  onClick={() => navigate('/auth')}
-                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
+                  disabled
+                  className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed"
                 >
-                  Sign In
+                  Coming Soon
                 </button>
               </div>
             </div>
           )}
+        </SettingGroup>
+
+        {/* Teacher & Expert Modes */}
+        <SettingGroup title="Special Modes">
+          <div className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-gray-900">Teacher Mode</h3>
+                <p className="text-sm text-gray-500">
+                  Help improve AI model with educational data
+                </p>
+              </div>
+              <button
+                disabled
+                className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed"
+              >
+                Coming Soon
+              </button>
+            </div>
+          </div>
+          <div className="border-t border-gray-100">
+            <div className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="font-medium text-gray-900">Expert Mode</h3>
+                  <p className="text-sm text-gray-500">
+                    Review and reclassify AI predictions
+                  </p>
+                </div>
+                <button
+                  disabled
+                  className="px-4 py-2 bg-gray-300 text-gray-500 rounded-lg text-sm font-medium cursor-not-allowed"
+                >
+                  Coming Soon
+                </button>
+              </div>
+            </div>
+          </div>
         </SettingGroup>
 
         {/* Notifications */}
@@ -273,17 +309,6 @@ export default function SettingsScreen() {
               </button>
             </div>
           </div>
-          {isGoogleGeolocationConfigured && (
-            <div className="border-t border-gray-100">
-              <ToggleItem
-                icon={Globe}
-                title="Use Google Geolocation"
-                subtitle="Get location without GPS permission (costs $5 per 1,000 requests)"
-                value={useGoogleGeolocation}
-                onChange={updateGeolocationPreference}
-              />
-            </div>
-          )}
         </SettingGroup>
 
         {/* Appearance */}
@@ -323,23 +348,6 @@ export default function SettingsScreen() {
           </div>
         </SettingGroup>
 
-        {/* Developer Tools */}
-        <SettingGroup title="Developer Tools">
-          <SettingItem
-            icon={Settings}
-            title="API Test Panel"
-            subtitle="Test API configuration and connections"
-            action={() => setShowApiTest(!showApiTest)}
-            showChevron={false}
-          />
-        </SettingGroup>
-
-        {/* API Test Panel */}
-        {showApiTest && (
-          <div className="mb-8">
-            <ApiTestPanel />
-          </div>
-        )}
 
         {/* Support */}
         <SettingGroup title="Support">
@@ -357,6 +365,16 @@ export default function SettingsScreen() {
               action={() => window.open('mailto:support@crowdpollen.com')}
             />
           </div>
+        </SettingGroup>
+
+        {/* Admin */}
+        <SettingGroup title="Admin">
+          <SettingItem
+            icon={Settings}
+            title="API Settings"
+            subtitle="Configure and monitor Google APIs"
+            action={() => navigate('/api-settings')}
+          />
         </SettingGroup>
 
         {/* Danger Zone */}
