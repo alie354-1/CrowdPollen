@@ -17,6 +17,12 @@ export default function GoogleMapScreen() {
   const [error, setError] = useState(null)
   const [mapData, setMapData] = useState([])
   const [forecastData, setForecastData] = useState(null)
+  const [activeOverlays, setActiveOverlays] = useState(() => ({
+    TREE_UPI: true,
+    GRASS_UPI: false,
+    WEED_UPI: false
+  }))
+  const overlayRefs = useRef({})
   // Unified view mode - always show both forecast and community data
   const [viewMode] = useState('hybrid')
   const [selectedSubmission, setSelectedSubmission] = useState(null)
@@ -80,12 +86,42 @@ export default function GoogleMapScreen() {
       })
 
       await loadMapData()
+      updateHeatmapOverlays()
     } catch (err) {
       console.error('Map initialization failed:', err)
       setError('Failed to load map. Please check your internet connection.')
     } finally {
       setLoading(false)
     }
+  }
+
+  useEffect(() => {
+    updateHeatmapOverlays()
+  }, [activeOverlays])
+
+  const updateHeatmapOverlays = () => {
+    if (!mapInstanceRef.current) return
+
+    const map = mapInstanceRef.current
+
+    Object.entries(activeOverlays).forEach(([mapType, isActive]) => {
+      if (isActive && !overlayRefs.current[mapType]) {
+        const overlay = new window.google.maps.ImageMapType({
+          getTileUrl: (coord, zoom) => googlePollenService.getHeatmapTileUrl(mapType, zoom, coord.x, coord.y),
+          tileSize: new window.google.maps.Size(256, 256),
+          name: mapType,
+          opacity: 0.6
+        })
+        map.overlayMapTypes.push(overlay)
+        overlayRefs.current[mapType] = overlay
+      } else if (!isActive && overlayRefs.current[mapType]) {
+        const index = map.overlayMapTypes.getArray().indexOf(overlayRefs.current[mapType])
+        if (index > -1) {
+          map.overlayMapTypes.removeAt(index)
+        }
+        delete overlayRefs.current[mapType]
+      }
+    })
   }
 
   const loadMapData = async () => {
@@ -223,7 +259,13 @@ export default function GoogleMapScreen() {
 
     // Add crowd-sourced data markers
     if (viewMode === 'crowd' || viewMode === 'hybrid') {
-      crowdData.forEach(point => {
+      const now = Date.now()
+      const recentData = crowdData.filter(p => {
+        const created = new Date(p.created_at).getTime()
+        return now - created <= 48 * 60 * 60 * 1000
+      })
+
+      recentData.forEach(point => {
         const marker = googleMapsService.createMarker(
           mapInstanceRef.current,
           { lat: point.latitude, lng: point.longitude },
@@ -232,9 +274,9 @@ export default function GoogleMapScreen() {
               path: window.google.maps.SymbolPath.CIRCLE,
               scale: getMarkerSize(point.pollen_count),
               fillColor: getPollenColor(point.pollen_density),
-              fillOpacity: 0.8,
-              strokeColor: '#FFFFFF',
-              strokeWeight: 1
+              fillOpacity: 1,
+              strokeColor: '#000000',
+              strokeWeight: 1.5
             },
             title: `${point.pollen_density.replace('_', ' ')} - ${point.pollen_count} grains/m³`
           }
@@ -275,7 +317,7 @@ export default function GoogleMapScreen() {
     const colors = {
       very_low: '#34C759',
       low: '#34C759',
-      moderate: '#FF9500',
+      moderate: '#FACC15',
       high: '#FF3B30',
       very_high: '#FF3B30'
     }
@@ -368,6 +410,26 @@ export default function GoogleMapScreen() {
             <h1 className="text-2xl font-semibold text-gray-900">Pollen Map</h1>
           </div>
           <div className="flex items-center space-x-2">
+            <div className="flex space-x-1">
+              {['TREE_UPI', 'GRASS_UPI', 'WEED_UPI'].map(type => (
+                <button
+                  key={type}
+                  onClick={() => {
+                    setActiveOverlays(prev => ({
+                      ...prev,
+                      [type]: !prev[type]
+                    }))
+                  }}
+                  className={`px-2 py-1 text-xs rounded-full border ${
+                    activeOverlays[type]
+                      ? 'bg-blue-500 text-white border-blue-500'
+                      : 'bg-white text-gray-600 border-gray-300'
+                  }`}
+                >
+                  {type.replace('_UPI', '')}
+                </button>
+              ))}
+            </div>
             <button
               onClick={loadMapData}
               disabled={loading}
@@ -440,15 +502,15 @@ export default function GoogleMapScreen() {
             <div className="space-y-2 text-xs">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-green-500 rounded-full mr-3" />
-                <span>Low (0-30)</span>
+                <span>Very Low / Low</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 bg-orange-500 rounded-full mr-3" />
-                <span>Moderate (31-60)</span>
+                <div className="w-3 h-3 bg-yellow-400 rounded-full mr-3" />
+                <span>Moderate</span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-red-500 rounded-full mr-3" />
-                <span>High (60+)</span>
+                <span>High / Very High</span>
               </div>
               {location && (
                 <div className="flex items-center pt-2 border-t border-gray-200">
@@ -463,17 +525,26 @@ export default function GoogleMapScreen() {
         {/* Stats */}
         {!loading && !error && (
           <>
-            <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-3">
+            <div
+              className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-3 cursor-pointer hover:bg-gray-50"
+              onClick={() => {
+                if (mapInstanceRef.current && mapData.length > 0) {
+                  const bounds = new window.google.maps.LatLngBounds()
+                  mapData.forEach(p => bounds.extend({ lat: p.latitude, lng: p.longitude }))
+                  mapInstanceRef.current.fitBounds(bounds)
+                }
+              }}
+            >
               <div className="text-center">
                 <div className="text-lg font-semibold">{mapData.length}</div>
-                <div className="text-xs text-gray-500">Reports</div>
+                <div className="text-xs text-gray-500">Reports (last 48h)</div>
               </div>
             </div>
             <div className="absolute top-4 left-4 bg-white rounded-xl shadow-lg p-3">
               <div className="text-sm font-medium text-gray-700 mb-2">Map Layers</div>
               <ul className="space-y-1 text-xs text-gray-600">
                 <li>• Community Reports (colored circles)</li>
-                <li>• Forecast Overlay (orange arrow)</li>
+                <li>• Pollen Forecast Overlays (Tree, Grass, Weed)</li>
               </ul>
             </div>
           </>

@@ -511,6 +511,7 @@ export const isConfigured = () => {
   return !!API_KEY;
 };
 
+
 // Export default object with all functions
 export default {
   getForecast,
